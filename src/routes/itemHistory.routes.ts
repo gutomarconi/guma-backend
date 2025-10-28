@@ -1,0 +1,16 @@
+import { Router } from 'express';
+import { getItemHistory, createItemHistory } from '../controllers/itemHistory.controller';
+
+const router = Router();
+
+/**
+ * @swagger
+ * /item-history:
+ *   get:
+ *     summary: Histórico de itens
+ *     tags: [ItemHistory]
+ */
+router.get('/', getItemHistory);
+router.post('/', createItemHistory);
+
+export default router;
