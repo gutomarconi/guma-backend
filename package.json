@@ -5,7 +5,8 @@
     "dev": "ts-node-dev --respawn src/server.ts",
     "migrate": "prisma migrate dev --name init --preview-feature",
     "generate": "prisma generate",
-    "build": "tsc"
+    "build": "tsc",
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",
