@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
-import { createItemHistorySchema } from '../schemas/itemHistory.schema';
+import { getItemByBarcode } from '../services/itemService';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 /**
  * @swagger
@@ -9,9 +10,11 @@ import { createItemHistorySchema } from '../schemas/itemHistory.schema';
  */
 export const getItemHistory = async (req: Request, res: Response) => {
   const { itemId, companyId } = req.query;
-  const where: any = {};
-  if (itemId) where.itemId = Number(itemId);
-  if (companyId) where.companyId = Number(companyId);
+    const where = {
+    companyId: Number(companyId),
+    ...(itemId ? { itemId: Number(itemId) } : {}),
+    ...(companyId ? { companyId: Number(companyId) } : {}),
+  }
 
   const history = await prisma.itemHistory.findMany({
     where,
@@ -22,14 +25,24 @@ export const getItemHistory = async (req: Request, res: Response) => {
 };
 
 export const createItemHistory = async (req: Request, res: Response) => {
-  const result = createItemHistorySchema.safeParse(req.body);
-  if (!result.success) return res.status(400).json({ errors: result.error.format() });
+  const { barcode, machineId } = req.body;
+
+  if (!barcode || !machineId) return res.status(400).json({ errors: "Dados inválidos" });
+
+  const item = await getItemByBarcode(barcode as string);
 
   try {
-    const history = await prisma.itemHistory.create({ data: result.data });
+    const history = await prisma.itemHistory.create({ data: {
+      machineId: Number(machineId),
+      itemId: Number(item?.id),
+      companyId: Number(req.user?.companyId)
+
+    } });
     res.status(201).json(history);
-  } catch (error: any) {
-    if (error.code === 'P2003') return res.status(400).json({ error: 'Item ou Máquina inválida' });
-    res.status(500).json({ error: 'Erro ao registrar histórico' });
+  } catch (error: unknown) {
+    // if (error instanceof PrismaClientKnownRequestError) {
+      // if (error.code === 'P2003') return res.status(400).json({ error: 'Item ou Máquina inválida' });
+      res.status(500).json({ error: 'Erro ao registrar histórico' });
+    // }
   }
 };

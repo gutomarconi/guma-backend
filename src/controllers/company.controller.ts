@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { createCompanySchema, updateCompanySchema } from '../schemas/company.schema';
+import { Prisma } from '@prisma/client';
 
 /**
  * @swagger
@@ -21,7 +22,7 @@ export const getCompanies = async (req: Request, res: Response) => {
     : {};
 
   const [companies, total] = await Promise.all([
-    prisma.company.findMany({ where, skip, take: Number(limit), orderBy: { createdAt: 'desc' } }),
+    prisma.company.findMany({ where, skip, take: Number(limit), orderBy: { createdAt: 'asc' } }),
     prisma.company.count({ where }),
   ]);
 
@@ -64,9 +65,11 @@ export const updateCompany = async (req: Request, res: Response) => {
       data: result.data,
     });
     res.json(company);
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
-    res.status(500).json({ error: 'Erro ao atualizar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
+      res.status(500).json({ error: 'Erro ao atualizar' });
+    }
   }
 };
 
@@ -75,8 +78,10 @@ export const deleteCompany = async (req: Request, res: Response) => {
   try {
     await prisma.company.delete({ where: { id: Number(id) } });
     res.status(204).send();
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
-    res.status(500).json({ error: 'Erro ao deletar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
+      res.status(500).json({ error: 'Erro ao deletar' });
+    }
   }
 };

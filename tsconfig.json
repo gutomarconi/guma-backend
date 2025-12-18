@@ -6,14 +6,20 @@
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
+    "moduleDetection": "force",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "baseUrl": "./",
-    "paths": {},
-    "typeRoots": ["./src/types", "./node_modules/@types"]
+    // "baseUrl": "./",
+    // "paths": {},
+    "typeRoots": ["./src/types", "./node_modules/@types"],
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": false,
+    "allowJs": false
   },
   "include": [
     "src/**/*"
-  ]
+  ],
+  "exclude": ["node_modules", "dist"]
 }

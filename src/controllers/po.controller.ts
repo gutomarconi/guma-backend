@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { createPOSchema, updatePOSchema } from '../schemas/po.schema';
+import { Prisma } from '@prisma/client';
 
 /**
  * @swagger
@@ -11,7 +12,7 @@ export const getPOs = async (req: Request, res: Response) => {
   const { companyId } = req.query;
   const where = companyId ? { companyId: Number(companyId) } : {};
 
-  const pos = await prisma.pO.findMany({ where, orderBy: { createdAt: 'desc' } });
+  const pos = await prisma.pO.findMany({ where, orderBy: { createdAt: 'asc' } });
   res.json(pos);
 };
 
@@ -31,9 +32,11 @@ export const updatePO = async (req: Request, res: Response) => {
   try {
     const po = await prisma.pO.update({ where: { id: Number(id) }, data: result.data });
     res.json(po);
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'PO não encontrada' });
-    res.status(500).json({ error: 'Erro ao atualizar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'PO não encontrada' });
+      res.status(500).json({ error: 'Erro ao atualizar' });
+    }
   }
 };
 
@@ -42,8 +45,10 @@ export const deletePO = async (req: Request, res: Response) => {
   try {
     await prisma.pO.delete({ where: { id: Number(id) } });
     res.status(204).send();
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
-    res.status(500).json({ error: 'Erro ao deletar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
+      res.status(500).json({ error: 'Erro ao deletar' });
+    }
   }
 };

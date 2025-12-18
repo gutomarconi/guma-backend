@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { createMachineSchema, updateMachineSchema } from '../schemas/machine.schema';
+import { Prisma } from '@prisma/client';
 
 /**
  * @swagger
@@ -13,8 +14,18 @@ export const getMachines = async (req: Request, res: Response) => {
   if (companyId) where.companyId = Number(companyId);
   if (poId) where.poId = Number(poId);
 
-  const machines = await prisma.machine.findMany({ where });
-  res.json(machines);
+  const machines = await prisma.machine.findMany({ where, include: {
+    po: {
+      select: {
+        description: true,
+      },
+    },
+  }, });
+  const result = machines.map(m => ({
+  ...m,
+  poDescription: m.po?.description || null,
+}));
+  res.json(result);
 };
 
 export const createMachine = async (req: Request, res: Response) => {
@@ -24,9 +35,11 @@ export const createMachine = async (req: Request, res: Response) => {
   try {
     const machine = await prisma.machine.create({ data: result.data });
     res.status(201).json(machine);
-  } catch (error: any) {
-    if (error.code === 'P2003') return res.status(400).json({ error: 'PO ou Company inválida' });
-    res.status(500).json({ error: 'Erro ao criar máquina' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2003') return res.status(400).json({ error: 'PO ou Company inválida' });
+      res.status(500).json({ error: 'Erro ao criar máquina' });
+    }
   }
 };
 
@@ -38,9 +51,11 @@ export const updateMachine = async (req: Request, res: Response) => {
   try {
     const machine = await prisma.machine.update({ where: { id: Number(id) }, data: result.data });
     res.json(machine);
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Máquina não encontrada' });
-    res.status(500).json({ error: 'Erro ao atualizar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Máquina não encontrada' });
+      res.status(500).json({ error: 'Erro ao atualizar' });
+    }
   }
 };
 
@@ -49,8 +64,10 @@ export const deleteMachine = async (req: Request, res: Response) => {
   try {
     await prisma.machine.delete({ where: { id: Number(id) } });
     res.status(204).send();
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
-    res.status(500).json({ error: 'Erro ao deletar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
+      res.status(500).json({ error: 'Erro ao deletar' });
+    }
   }
 };

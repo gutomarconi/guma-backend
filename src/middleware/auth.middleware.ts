@@ -29,6 +29,7 @@ export default async function authMiddleware(req: AuthRequest, res: Response, ne
         };
         return next();
       } catch (err) {
+        console.log(err)
         return res.status(401).json({ error: "Invalid token" });
       }
     }
@@ -43,7 +44,7 @@ export default async function authMiddleware(req: AuthRequest, res: Response, ne
       };
       return next();
     }
-
+    console.log( 'aquii')
     return res.status(401).json({ error: "Unauthorized" });
   } catch (err) {
     console.error(err);

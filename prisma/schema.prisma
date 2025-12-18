@@ -16,31 +16,32 @@ model Company {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  companyId  Int?
-  name       String   @default("")
-  email      String   @unique
-  senha      String
-  role       String   @default("user")
-  createdAt  DateTime @default(now())
-  company    Company?  @relation(fields: [companyId], references: [id])
+  id        Int      @id @default(autoincrement())
+  companyId Int?
+  name      String   @default("")
+  email     String   @unique
+  senha     String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  company   Company? @relation(fields: [companyId], references: [id])
 }
 
 model ApiKey {
-  id         Int      @id @default(autoincrement())
-  companyId  Int
-  key        String   @unique
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  key         String   @unique
   description String?
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  company    Company  @relation(fields: [companyId], references: [id])
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  company     Company  @relation(fields: [companyId], references: [id])
 }
 
 model PO {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   companyId   Int
   description String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  Machine     Machine[]
 }
 
 enum CapacityUnity {
@@ -49,33 +50,52 @@ enum CapacityUnity {
 }
 
 model Machine {
-  id              Int      @id @default(autoincrement())
-  companyId       Int
-  description     String
-  createdAt       DateTime @default(now())
-  poId            Int
-  capacity        Float
-  capacity_unity  CapacityUnity @default(M2)
-  unity_cost      Float
+  id             Int           @id @default(autoincrement())
+  companyId      Int
+  description    String
+  createdAt      DateTime      @default(now())
+  poId           Int
+  capacity       Float
+  capacity_unity CapacityUnity @default(M2)
+  unity_cost     Float
+  po             PO            @relation(fields: [poId], references: [id])
 }
 
 model Item {
-  id              Int      @id @default(autoincrement())
-  companyId       Int
-  order_number    Int
-  batch_number    Int
-  box_number      Int?
-  barcode         String
-  order_date      DateTime
-  rawData         Json
-  createdAt       DateTime @default(now())
-  itemHistory     ItemHistory[]
+  id                  Int           @id @default(autoincrement())
+  companyId           Int
+  order_number        Int
+  batch_number        Int
+  box_number          Int?
+  barcode             String
+  order_date          DateTime
+  rawData             Json
+  createdAt           DateTime      @default(now())
+  itemHistory         ItemHistory[]
+  item_code           String
+  buy_order           String
+  order_delivery_date DateTime
+  load_number         String
+  has_cutting_po      Boolean
+  has_bordering_po    Boolean
+  has_drilling_po     Boolean
+  has_packaging_po    Boolean
+  description         String
+  quantity            Float
 }
 
 model ItemHistory {
-  id          Int      @id @default(autoincrement())
+  id        Int  @id @default(autoincrement())
+  companyId Int
+  itemId    Int
+  item      Item @relation(fields: [itemId], references: [id])
+  machineId Int
+}
+
+model FileMapping {
+  id          Int  @id @default(autoincrement())
   companyId   Int
-  itemId      Int
-  item        Item  @relation(fields: [itemId], references: [id])
-  machineId   Int
+  mapping     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

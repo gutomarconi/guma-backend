@@ -12,7 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "change_me";
 // register (create user)
 router.post("/register", async (req, res) => {
   const { name, email, senha, companyId, role } = req.body;
-  if (!email || !senha || !companyId) return res.status(400).json({ error: "email, senha and empresaId required" });
+  if (!email || !senha || !companyId) return res.status(400).json({ error: "email, senha and empresa obrigatórios" });
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(400).json({ error: "email already in use" });
   const hash = await bcrypt.hash(senha, 10);
@@ -23,12 +23,15 @@ router.post("/register", async (req, res) => {
 // login
 router.post("/login", async (req, res) => {
   const { email, senha } = req.body;
-  if (!email || !senha) return res.status(400).json({ error: "email and senha required" });
+  console.log(email, senha)
+  console.log(await bcrypt.hash('superadmin', 10));
+  if (!email || !senha) return res.status(400).json({ error: "email and senha obrigatórios" });
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return res.status(401).json({ error: "Invalid credentials" });
+  if (!user) return res.status(401).json({ error: "Credenciais inválidas" });
+  
   const ok = await bcrypt.compare(senha, user.senha);
-  if (!ok) return res.status(401).json({ error: "Invalid credentials" });
-  const token = jwt.sign({ userId: user.id, companyId: user.companyId }, JWT_SECRET, { expiresIn: "1h" });
+  if (!ok) return res.status(401).json({ error: "Credenciais inválidas" });
+  const token = jwt.sign({ userId: user.id, companyId: user.role === 'superadmin' ? 99999 : user.companyId, role: user.role }, JWT_SECRET, { expiresIn: "20h" });
   res.json({ token });
 });
 

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { createApiKeySchema, updateApiKeySchema } from '../schemas/apikey.schema';
 import { randomUUID } from 'crypto';
+import { Prisma } from '@prisma/client';
 
 /**
  * @swagger
@@ -31,9 +32,11 @@ export const createApiKey = async (req: Request, res: Response) => {
       select: { id: true, key: true, description: true, active: true },
     });
     res.status(201).json(apiKey);
-  } catch (error: any) {
-    if (error.code === 'P2003') return res.status(400).json({ error: 'Company não existe' });
-    res.status(500).json({ error: 'Erro ao criar chave' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2003') return res.status(400).json({ error: 'Company não existe' });
+      res.status(500).json({ error: 'Erro ao criar chave' });
+    }
   }
 };
 
@@ -49,9 +52,11 @@ export const updateApiKey = async (req: Request, res: Response) => {
       select: { id: true, key: true, description: true, active: true },
     });
     res.json(apiKey);
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Chave não encontrada' });
-    res.status(500).json({ error: 'Erro ao atualizar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Chave não encontrada' });
+      res.status(500).json({ error: 'Erro ao atualizar' });
+    }
   }
 };
 
@@ -60,8 +65,10 @@ export const deleteApiKey = async (req: Request, res: Response) => {
   try {
     await prisma.apiKey.delete({ where: { id: Number(id) } });
     res.status(204).send();
-  } catch (error: any) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
-    res.status(500).json({ error: 'Erro ao deletar' });
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Não encontrada' });
+      res.status(500).json({ error: 'Erro ao deletar' });
+    }
   }
 };

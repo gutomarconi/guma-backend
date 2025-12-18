@@ -4,7 +4,7 @@ export const createUserSchema = z.object({
   name: z.string().optional(),
   email: z.email('Email inválido'),
   senha: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-  role: z.enum(['user', 'admin', 'manager']).optional(),
+  role: z.enum(["superadmin","admin","user","service"]).optional(),
   companyId: z.number().int().optional(),
 });
 

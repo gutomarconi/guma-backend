@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getItems, createItem, updateItem } from '../controllers/item.controller';
+import { getItems, createItem, updateItem, createItems } from '../controllers/item.controller';
 
 const router = Router();
 
@@ -12,6 +12,7 @@ const router = Router();
  */
 router.get('/', getItems);
 router.post('/', createItem);
+router.post('/create-items', createItems);
 router.patch('/:id', updateItem);
 
 export default router;
