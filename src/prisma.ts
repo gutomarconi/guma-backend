@@ -12,3 +12,4 @@ prisma.$on('query', (e) => {
 });
 export default prisma;
     
+export * from '@prisma/client';

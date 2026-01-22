@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  getOrderDetails, getOrdersTotals, getOrderById
+  getOrderDetails, getOrdersSummary, getOrdersTotals
 } from '../controllers/orders.controller';
 
 const router = Router();
@@ -23,7 +23,7 @@ const router = Router();
  *         schema: { type: string }
  */
 router.post('/orders-details', getOrderDetails);
-router.get('/:id', getOrderById);
 router.get('/orders-totals/', getOrdersTotals);
+router.post('/orders-summary', getOrdersSummary)
 
 export default router;

@@ -99,3 +99,27 @@ model FileMapping {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model VwOrderMachineDetail {
+  company_id         Int
+  order_number       String
+  batch_number       String
+  box_number         String
+  order_date         DateTime
+  order_delivery_date DateTime?
+
+  cutting_total      Int
+  cutting_done       Int
+  drilling_total     Int
+  drilling_done      Int
+  border_total       Int
+  border_done        Int
+  packing_total      Int
+  packing_done       Int
+
+  order_status       String
+  items              Json
+
+  @@map("vw_order_machine_detail")
+  @@ignore
+}
