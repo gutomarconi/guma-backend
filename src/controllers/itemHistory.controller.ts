@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { getItemByBarcode } from '../services/itemService';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { ICreateItemHistory } from '../types';
 
 /**
  * @swagger
@@ -44,5 +45,29 @@ export const createItemHistory = async (req: Request, res: Response) => {
       // if (error.code === 'P2003') return res.status(400).json({ error: 'Item ou Máquina inválida' });
       res.status(500).json({ error: 'Erro ao registrar histórico' });
     // }
+  }
+};
+
+export const createItemHistories = async (req: Request, res: Response) => {
+  const itemHistories: ICreateItemHistory[] = req.body;
+
+  if (!itemHistories || itemHistories.length === 0) return res.status(400).json({ errors: "Dados inválidos" });
+  try {
+    const createdHistories = [];
+    for (const itemHistory of itemHistories) {
+      const { barcode, machineId } = itemHistory;
+      if (barcode && machineId) {
+        const item = await getItemByBarcode(barcode);
+        const history = await prisma.itemHistory.create({ data: {
+          machineId: Number(machineId),
+          itemId: Number(item?.id),
+          companyId: Number(req.user?.companyId)
+        }});
+        createdHistories.push(history);
+      }
+    }
+    res.status(201).json(createdHistories);
+  } catch (error: unknown) {
+      res.status(500).json({ error: 'Erro ao registrar históricos' });
   }
 };

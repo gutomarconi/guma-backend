@@ -82,6 +82,11 @@ model Item {
   has_packaging_po    Boolean
   description         String
   quantity            Float
+  cubic_meter         Float      @default(0)
+  linear_meter        Float      @default(0)
+  square_meter        Float      @default(0)
+  material_cut        String      @default("")
+  material_border     String      @default("")
 }
 
 model ItemHistory {
@@ -90,6 +95,7 @@ model ItemHistory {
   itemId    Int
   item      Item @relation(fields: [itemId], references: [id])
   machineId Int
+  createdAt DateTime      @default(now())
 }
 
 model FileMapping {
@@ -98,28 +104,4 @@ model FileMapping {
   mapping     Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-}
-
-model VwOrderMachineDetail {
-  company_id         Int
-  order_number       String
-  batch_number       String
-  box_number         String
-  order_date         DateTime
-  order_delivery_date DateTime?
-
-  cutting_total      Int
-  cutting_done       Int
-  drilling_total     Int
-  drilling_done      Int
-  border_total       Int
-  border_done        Int
-  packing_total      Int
-  packing_done       Int
-
-  order_status       String
-  items              Json
-
-  @@map("vw_order_machine_detail")
-  @@ignore
 }

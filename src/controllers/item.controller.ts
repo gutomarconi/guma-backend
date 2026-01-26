@@ -55,7 +55,11 @@ export const createItem = async (req: Request, res: Response) => {
         companyId: req.user?.companyId ?? 1,
         order_delivery_date: parseDateDDMMYYYY(item.DataEntrega ?? ''),
         order_date: parseDateDDMMYYYY(item.DataEmissao ?? ''),
-
+        cubic_meter: item.CubicMeter,
+        linear_meter: item.LinearMeter,
+        square_meter: item.SquareMeter,
+        material_cut: item.MaterialCut,
+        material_border: item.MaterialBorder
       }
     });
 
@@ -111,6 +115,12 @@ export const createItems = async (req: Request, res: Response) => {
         order_date: parseDateDDMMYYYY(item.DataEmissao ?? ''),
         rawData: '',
         companyId: req.user?.companyId ?? 1,
+        cubic_meter: item.CubicMeter,
+        linear_meter: item.LinearMeter,
+        square_meter: item.SquareMeter,
+        material_cut: item.MaterialCut,
+        material_border: item.MaterialBorder
+
       })),
       skipDuplicates: true,
     });

@@ -94,8 +94,6 @@ FROM order_totals ot
 JOIN item_machine im
   ON im.company_id = ot.company_id
  AND im.order_number = ot.order_number
- AND im.batch_number = ot.batch_number
- AND im.box_number = ot.box_number
 
 GROUP BY
   ot.company_id,

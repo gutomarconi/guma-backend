@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { Prisma } from '@prisma/client';
+import { number } from 'zod';
+// import dayjs from 'dayjs';
 /**
  * @swagger
  * tags:
@@ -33,7 +35,8 @@ export const getOrdersSummary = async (req: Request, res: Response) => {
               json_build_object(
                 'activeOrdersCount', COUNT(*),
                 'finishedOrdersCount', COUNT(*) FILTER (WHERE order_status = 'DONE'),
-                'pendingOrdersCount',COUNT(*) FILTER (WHERE order_status = 'PENDING')
+                'pendingOrdersCount',COUNT(*) FILTER (WHERE order_status = 'PENDING'),
+                'lateOrdersCount',COUNT(*) FILTER (WHERE order_delivery_date <= ${new Date().toISOString()}::date)
               ) AS stats
             FROM public.vw_order_machine_detail
             WHERE company_id = ${companyId};
@@ -55,10 +58,40 @@ type GetOrderDetailsBody = {
   batchNumber?: number;
   status?: string[];
   searchItem?: string;
+  poStatus?: Record<string, string[]>;
+};
+
+const getOperationField = (id: number): string => {
+  if (id === 1) return 'cutting';
+  if (id === 2) return 'border';
+  if (id === 3) return 'drilling';
+  return 'packing';
+}
+
+const getOperation = (status: string): string => {
+  return status.toLowerCase() === 'pending' ? '>' : '=';
+}
+
+const poStatusToMap = (
+  poStatus?: Record<string, string[]>
+): Map<number, string[]> => {
+  const map = new Map<number, string[]>();
+
+  if (!poStatus) return map;
+
+  for (const [key, value] of Object.entries(poStatus)) {
+    const numericKey = Number(key);
+
+    if (!Number.isNaN(numericKey)) {
+      map.set(numericKey, value);
+    }
+  }
+
+  return map;
 };
 
 export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
-  const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem } = req.body;
+  const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus } = req.body;
     if (!startDate || !endDate || !companyId) {
         return res.status(400).json({ error: 'Date filters are missing' });
     }
@@ -83,6 +116,41 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
         filters.push(
           Prisma.sql`AND "order_status" IN (${inClause})`
         );        
+      }
+
+      if (poStatus) {
+        // Object.entries(poStatus).forEach((value: [string, string[]]) => {
+        //   const [machineId, poStatusList] = value;
+        //   console.log(machineId, poStatusList)
+        //   if (poStatusList.length === 1) {
+        //     const [filteredStatus] = poStatusList;
+        //     if (filteredStatus) {
+        //       filters.push(
+        //         Prisma.sql`AND ${getOperationField(machineId)}_total ${getOperation(filteredStatus)} ${getOperationField(machineId)}_total`
+        //       );        
+        //     }
+        //   }
+        // })
+        const poStatusMap = poStatusToMap(poStatus);
+
+        for (const [machineId, poStatusList] of poStatusMap) {
+          if (poStatusList.length === 1) {
+            const [filteredStatus] = poStatusList;
+
+            filters.push(
+              Prisma.sql`
+                AND ${Prisma.raw(getOperationField(machineId))}_total
+                ${Prisma.raw(getOperation(filteredStatus))}
+                ${Prisma.raw(getOperationField(machineId))}_done
+              `
+            );
+console.log('aquiiii', Prisma.sql`
+                AND ${Prisma.raw(getOperationField(machineId))}_total
+                ${Prisma.raw(getOperation(filteredStatus))}
+                ${Prisma.raw(getOperationField(machineId))}_done
+              `)
+          }
+        }
       }
 
       const result = await prisma.$queryRaw`
