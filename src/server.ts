@@ -19,8 +19,9 @@ dotenv.config();
 
 const app = express();
 
+const environment = process.env.NODE_ENV || 'development';
 app.use(cors({
-  origin: 'http://localhost:3001',
+  origin: environment === 'development' ? 'http://localhost:3001' : 'https://app.prodplan.com.br',
   credentials: true,
 }));
 
