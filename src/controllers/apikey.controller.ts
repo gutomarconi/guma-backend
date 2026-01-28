@@ -21,6 +21,8 @@ export const getApiKeys = async (req: Request, res: Response) => {
 };
 
 export const createApiKey = async (req: Request, res: Response) => {
+  console.log('payload create api key');
+  console.log(request.data)
   const result = createApiKeySchema.safeParse(req.body);
   if (!result.success) return res.status(400).json({ errors: result.error.format() });
   const { companyId } = result.data;
