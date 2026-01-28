@@ -14,11 +14,11 @@ export interface ICreateItemBody {
   CodigoBarras: string;
   DataEntrega?: string;
   DataEmissao?: string;
-  CubicMeter?: number;
-  LinearMeter?: number;
-  SquareMeter?: number;
-  MaterialCut?: string;
-  MaterialBorder?: string;
+  MetroCubico?: number;
+  MetroLinear?: number;
+  MetroQuadrado?: number;
+  MaterialCorte?: string;
+  MaterialBorda?: string;
 }
 
 export interface ICreateItemHistory {

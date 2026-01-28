@@ -29,6 +29,7 @@ app.use(express.json());
 
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/api/apikeys", apikeyRoutes);
 
 app.use("/auth", authRoutes);
 
@@ -39,7 +40,7 @@ app.use("/api", authMiddleware);
 app.use("/api/companies", empresaRoutes);
 app.use("/api", tenantMiddleware);
 app.use("/api/users", userRoutes);
-app.use("/api/apikeys", apikeyRoutes);
+
 app.use("/api/po", poRoutes);
 app.use("/api/machine", machineRoutes);
 app.use("/api/items", itemRoutes);

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getItemHistory, createItemHistory } from '../controllers/itemHistory.controller';
+import { getItemHistory, createItemHistory, createItemHistories } from '../controllers/itemHistory.controller';
 
 const router = Router();
 
@@ -12,5 +12,6 @@ const router = Router();
  */
 router.get('/', getItemHistory);
 router.post('/', createItemHistory);
+router.post('/batch', createItemHistories);
 
 export default router;

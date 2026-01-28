@@ -23,6 +23,15 @@ export const getApiKeys = async (req: Request, res: Response) => {
 export const createApiKey = async (req: Request, res: Response) => {
   const result = createApiKeySchema.safeParse(req.body);
   if (!result.success) return res.status(400).json({ errors: result.error.format() });
+  const { companyId } = result.data;
+  const envSecret = process.env.API_KEY_SECRET ?? '';
+  if (envSecret !== result.data.secret) {
+    res.status(400).json({ errors: ['Secret does not match'] });    
+  }
+  const company = await prisma.company.findFirst({ where: { id: companyId } });
+  if (!company) {
+    res.status(400).json({ errors: ['Company does not exist'] });
+  }
 
   const key = randomUUID();
 
@@ -33,6 +42,7 @@ export const createApiKey = async (req: Request, res: Response) => {
     });
     res.status(201).json(apiKey);
   } catch (error: unknown) {
+    console.log(error)
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2003') return res.status(400).json({ error: 'Company não existe' });
       res.status(500).json({ error: 'Erro ao criar chave' });
