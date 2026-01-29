@@ -96,6 +96,7 @@ model ItemHistory {
   item      Item @relation(fields: [itemId], references: [id])
   machineId Int
   createdAt DateTime      @default(now())
+  readDate  DateTime      @default(now())
 }
 
 model FileMapping {
@@ -104,4 +105,13 @@ model FileMapping {
   mapping     Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+
+model MachineFingerprint {
+  id          Int  @id @default(autoincrement())
+  companyId   Int
+  fingerprint String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }

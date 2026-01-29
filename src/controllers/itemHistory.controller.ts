@@ -26,7 +26,7 @@ export const getItemHistory = async (req: Request, res: Response) => {
 };
 
 export const createItemHistory = async (req: Request, res: Response) => {
-  const { barcode, machineId } = req.body;
+  const { barcode, machineId, readDate } = req.body;
 
   if (!barcode || !machineId) return res.status(400).json({ errors: "Dados inválidos" });
 
@@ -36,8 +36,8 @@ export const createItemHistory = async (req: Request, res: Response) => {
     const history = await prisma.itemHistory.create({ data: {
       machineId: Number(machineId),
       itemId: Number(item?.id),
-      companyId: Number(req.user?.companyId)
-
+      companyId: Number(req.user?.companyId),
+      readDate
     } });
     res.status(201).json(history);
   } catch (error: unknown) {
@@ -61,7 +61,8 @@ export const createItemHistories = async (req: Request, res: Response) => {
         const history = await prisma.itemHistory.create({ data: {
           machineId: Number(machineId),
           itemId: Number(item?.id),
-          companyId: Number(req.user?.companyId)
+          companyId: Number(req.user?.companyId),
+          readDate: itemHistory.readDate
         }});
         createdHistories.push(history);
       }

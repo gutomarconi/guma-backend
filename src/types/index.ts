@@ -24,4 +24,5 @@ export interface ICreateItemBody {
 export interface ICreateItemHistory {
   barcode: string;
   machineId: string;
+  readDate: string;
 }

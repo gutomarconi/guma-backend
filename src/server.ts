@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.routes";
 import apikeyRoutes from "./routes/apikey.routes";
 import poRoutes from "./routes/po.routes";
 import machineRoutes from "./routes/machine.routes";
+import machineFingerprintRoutes from "./routes/machineFingerprint.routes";
 import authMiddleware from "./middleware/auth.middleware";
 import { tenantMiddleware } from "./middleware/tenant.middleware";
 import swaggerSpec from './swagger';
@@ -43,6 +44,7 @@ app.use("/api/users", userRoutes);
 
 app.use("/api/po", poRoutes);
 app.use("/api/machine", machineRoutes);
+app.use("/api/machine-fingerprint", machineFingerprintRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/item-history", itemHistoryRoutes);
 app.use("/api/orders", orderRoutes);
