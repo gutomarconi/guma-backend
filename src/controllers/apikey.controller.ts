@@ -39,7 +39,12 @@ export const createApiKey = async (req: Request, res: Response) => {
 
   try {
     const apiKey = await prisma.apiKey.create({
-      data: { ...result.data, key },
+      data: { 
+        active: true,
+        companyId: result.data.companyId,
+        description: result.data.description,  
+        key 
+      },
       select: { id: true, key: true, description: true, active: true },
     });
     res.status(201).json(apiKey);
