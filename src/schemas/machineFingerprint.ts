@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const createMachineFingerprintSchema = z.object({
   companyId: z.number().int(),
   fingerprint: z.string(),
-  active: z.boolean()
+  active: z.boolean(),
+  machineId: z.number().int(),
 });
 
 export const updateMachineFingerprintSchema = createMachineFingerprintSchema.partial();

@@ -14,8 +14,20 @@ export const getMachineFingerprint = async (req: Request, res: Response) => {
   const where: any = {};
   if (companyId) where.companyId = Number(companyId);
   if (id) where.id = Number(id);
-console.log(companyId, id)
+
   const result = await prisma.machineFingerprint.findFirst({ where });
+  console.log(result)
+  res.json(result);
+};
+
+export const getMachineFingerprints = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { companyId } = req.user;
+  const where: any = {};
+  if (companyId) where.companyId = Number(companyId);
+  if (id) where.machineId = Number(id);
+
+  const result = await prisma.machineFingerprint.findMany({ where });
   console.log(result)
   res.json(result);
 };

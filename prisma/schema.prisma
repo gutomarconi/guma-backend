@@ -114,4 +114,5 @@ model MachineFingerprint {
   fingerprint String
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
+  machineId   Int
 }
