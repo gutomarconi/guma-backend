@@ -47,6 +47,8 @@ model PO {
 enum CapacityUnity {
   M2
   UN
+  M3
+  M
 }
 
 model Machine {

@@ -71,3 +71,60 @@ export const deleteMachine = async (req: Request, res: Response) => {
     }
   }
 };
+
+export const getMachineStats = async (req: Request, res: Response) => {
+    const { startDate, endDate } = req.body;
+    const { id } = req.params;
+    const { companyId } = req.user;
+
+    console.log(startDate, endDate, id, companyId)
+    if (!startDate || !endDate || !id) {
+        return res.status(400).json({ error: 'Date filters and/or machine id are missing' });
+    }
+
+    try {
+      const result = await prisma.$queryRaw`
+        SELECT
+          m.capacity AS "dailyCapacity",
+          m.unity_cost AS "unityCost",
+          m.capacity_unity AS "capacityUnity",
+
+          COUNT(ih.id) AS "totalDone",
+
+          CASE
+            WHEN m.capacity_unity = 'M2' THEN i.square_meter
+            WHEN m.capacity_unity = 'M3' THEN i.cubic_meter
+            WHEN m.capacity_unity = 'M'  THEN i.linear_meter
+            ELSE 1
+          END AS "itemMetric"
+
+        FROM "Machine" m
+
+        LEFT JOIN "ItemHistory" ih
+          ON ih."machineId" = m.id
+          AND ih."readDate" BETWEEN ${startDate}::date AND ${endDate}::date
+
+        LEFT JOIN "Item" i
+          ON i.id = ih."itemId"
+
+        WHERE m.id = ${Number(id)} and m."companyId" = ${Number(companyId)}
+
+        GROUP BY
+          m.capacity,
+          m.unity_cost,
+          m.capacity_unity,
+          i.square_meter,
+          i.cubic_meter,
+          i.linear_meter;      
+      `;
+      const parsed = JSON.parse(
+          JSON.stringify(result, (_, value) =>
+          typeof value === 'bigint' ? Number(value) : value
+          )
+      );
+      res.status(200).json(parsed);
+    } catch(err:any) {
+        console.log(err)
+        res.status(500).json({ error: 'Erro ao tentar buscar pedidos' });
+    }
+}

@@ -31,7 +31,7 @@ router.post("/login", async (req, res) => {
 
   const ok = await bcrypt.compare(senha, user.senha);
   if (!ok) return res.status(401).json({ error: "Credenciais inválidas" });
-  const token = jwt.sign({ userId: user.id, companyId: user.role === 'superadmin' ? 99999 : user.companyId, role: user.role, name: user.name, email: user.email }, JWT_SECRET, { expiresIn: "20h" });
+  const token = jwt.sign({ userId: user.id, companyId: user.role === 'superadmin' ? 999999 : user.companyId, role: user.role, name: user.name, email: user.email }, JWT_SECRET, { expiresIn: "20h" });
   res.json({ token });
 });
 

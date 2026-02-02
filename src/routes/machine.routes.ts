@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMachines, createMachine, updateMachine, deleteMachine } from '../controllers/machine.controller';
+import { getMachines, createMachine, updateMachine, deleteMachine, getMachineStats } from '../controllers/machine.controller';
 
 const router = Router();
 
@@ -12,6 +12,7 @@ const router = Router();
  */
 router.get('/', getMachines);
 router.post('/', createMachine);
+router.post('/:id/stats', getMachineStats);
 router.patch('/:id', updateMachine);
 router.delete('/:id', deleteMachine);
 

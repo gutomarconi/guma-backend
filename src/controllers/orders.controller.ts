@@ -119,18 +119,6 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
       }
 
       if (poStatus) {
-        // Object.entries(poStatus).forEach((value: [string, string[]]) => {
-        //   const [machineId, poStatusList] = value;
-        //   console.log(machineId, poStatusList)
-        //   if (poStatusList.length === 1) {
-        //     const [filteredStatus] = poStatusList;
-        //     if (filteredStatus) {
-        //       filters.push(
-        //         Prisma.sql`AND ${getOperationField(machineId)}_total ${getOperation(filteredStatus)} ${getOperationField(machineId)}_total`
-        //       );        
-        //     }
-        //   }
-        // })
         const poStatusMap = poStatusToMap(poStatus);
 
         for (const [machineId, poStatusList] of poStatusMap) {
@@ -144,11 +132,6 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
                 ${Prisma.raw(getOperationField(machineId))}_done
               `
             );
-console.log('aquiiii', Prisma.sql`
-                AND ${Prisma.raw(getOperationField(machineId))}_total
-                ${Prisma.raw(getOperation(filteredStatus))}
-                ${Prisma.raw(getOperationField(machineId))}_done
-              `)
           }
         }
       }
