@@ -5,6 +5,10 @@ WITH item_machine AS (
     i.item_code AS item_code,
     i.description AS item_description,
     i.barcode,
+    i.has_cutting_po,
+    i.has_drilling_po,
+    i.has_bordering_po,
+    i.has_packaging_po,
 
     i.order_number,
     i.batch_number,
@@ -22,12 +26,12 @@ WITH item_machine AS (
 
   FROM public."Item" i
 
-  CROSS JOIN (
-    SELECT 1 AS machine_id
-    UNION ALL SELECT 2
-    UNION ALL SELECT 3
-    UNION ALL SELECT 4
-  ) m
+  JOIN "Machine" m
+    ON m."companyId" = i."companyId"
+
+  JOIN "PO" p
+    ON p.id = m."poId"
+   AND p.description IN ('Corte','Borda','Furação','Embalagem')
 
   LEFT JOIN public."ItemHistory" ih
     ON ih."itemId" = i.id
@@ -43,18 +47,17 @@ order_totals AS (
     order_date,
     order_delivery_date,
 
-    COUNT(*) FILTER (WHERE machine_id = 1) AS cutting_total,
-    COUNT(*) FILTER (WHERE machine_id = 1 AND machine_status = 'DONE') AS cutting_done,
+    COUNT(*) FILTER (WHERE machine_id = 1 and has_cutting_po = true) AS cutting_total,
+    COUNT(*) FILTER (WHERE machine_id = 1 and has_cutting_po = true AND machine_status = 'DONE') AS cutting_done,
 
-    COUNT(*) FILTER (WHERE machine_id = 2) AS drilling_total,
-    COUNT(*) FILTER (WHERE machine_id = 2 AND machine_status = 'DONE') AS drilling_done,
+    COUNT(*) FILTER (WHERE machine_id = 2 and has_drilling_po = true) AS drilling_total,
+    COUNT(*) FILTER (WHERE machine_id = 2 and has_drilling_po = true AND machine_status = 'DONE') AS drilling_done,
 
-    COUNT(*) FILTER (WHERE machine_id = 3) AS border_total,
-    COUNT(*) FILTER (WHERE machine_id = 3 AND machine_status = 'DONE') AS border_done,
+    COUNT(*) FILTER (WHERE machine_id = 3 and has_bordering_po = true) AS border_total,
+    COUNT(*) FILTER (WHERE machine_id = 3 and has_bordering_po = true AND machine_status = 'DONE') AS border_done,
 
-    COUNT(*) FILTER (WHERE machine_id = 4) AS packing_total,
-    COUNT(*) FILTER (WHERE machine_id = 4 AND machine_status = 'DONE') AS packing_done
-
+    COUNT(*) FILTER (WHERE machine_id = 4 and has_packaging_po = true) AS packing_total,
+    COUNT(*) FILTER (WHERE machine_id = 4 and has_packaging_po = true AND machine_status = 'DONE') AS packing_done
   FROM item_machine
   GROUP BY
     company_id,
