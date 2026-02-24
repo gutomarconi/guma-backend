@@ -17,7 +17,7 @@ WITH item_machine AS (
     i.order_delivery_date,
     i."companyId" AS company_id,
 
-    m.machine_id,
+    m.id as machine_id,
 
     CASE
       WHEN ih.id IS NOT NULL THEN 'DONE'
@@ -35,7 +35,7 @@ WITH item_machine AS (
 
   LEFT JOIN public."ItemHistory" ih
     ON ih."itemId" = i.id
-   AND ih."machineId" = m.machine_id
+   AND ih."machineId" = machine_id
 ),
 
 order_totals AS (
