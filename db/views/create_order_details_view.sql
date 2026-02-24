@@ -17,7 +17,7 @@ WITH item_machine AS (
     i.order_delivery_date,
     i."companyId" AS company_id,
 
-    m.id as machine_id,
+    m.id AS machine_id,
 
     CASE
       WHEN ih.id IS NOT NULL THEN 'DONE'
