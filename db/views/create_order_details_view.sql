@@ -35,7 +35,7 @@ WITH item_machine AS (
 
   LEFT JOIN public."ItemHistory" ih
     ON ih."itemId" = i.id
-   AND ih."machineId" = machine_id
+   AND ih."machineId" = m.id
 ),
 
 order_totals AS (
