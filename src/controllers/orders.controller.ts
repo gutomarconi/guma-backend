@@ -144,6 +144,7 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
           ${filters.length ? Prisma.join(filters, `\n`) : Prisma.empty}
           ORDER BY order_date DESC;
       `;
+
       const parsed = JSON.parse(
           JSON.stringify(result, (_, value) =>
           typeof value === 'bigint' ? Number(value) : value
