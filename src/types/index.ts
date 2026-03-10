@@ -19,6 +19,7 @@ export interface ICreateItemBody {
   MetroQuadrado?: number;
   MaterialCorte?: string;
   MaterialBorda?: string;
+  Cliente?: string;
 }
 
 export interface ICreateItemHistory {

@@ -89,6 +89,7 @@ model Item {
   square_meter        Float      @default(0)
   material_cut        String      @default("")
   material_border     String      @default("")
+  cliente             String      @default("")
 }
 
 model ItemHistory {

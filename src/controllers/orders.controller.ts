@@ -53,7 +53,7 @@ type GetOrderDetailsBody = {
   startDate: string;
   endDate: string;
   companyId: number;
-
+  loadNumber?: number;
   orderNumber?: number;
   batchNumber?: number;
   status?: string[];
@@ -91,7 +91,7 @@ const poStatusToMap = (
 };
 
 export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
-  const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus } = req.body;
+  const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus, loadNumber } = req.body;
     if (!startDate || !endDate || !companyId) {
         return res.status(400).json({ error: 'Date filters are missing' });
     }
@@ -108,6 +108,10 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
 
       if (searchItem) {
         filters.push(Prisma.sql`AND items::text ILIKE ${'%' + searchItem + '%'}`);
+      }
+
+      if (loadNumber) {
+        filters.push(Prisma.sql`AND load_number = ${Number(loadNumber)}`);
       }
 
       if (status && status.length > 0) {

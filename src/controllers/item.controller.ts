@@ -59,7 +59,8 @@ export const createItem = async (req: Request, res: Response) => {
         linear_meter: item.MetroLinear,
         square_meter: item.MetroQuadrado,
         material_cut: item.MaterialCorte,
-        material_border: item.MaterialBorda
+        material_border: item.MaterialBorda,
+        cliente: item.Cliente,
       }
     });
 
@@ -119,7 +120,8 @@ export const createItems = async (req: Request, res: Response) => {
         linear_meter: item.MetroLinear,
         square_meter: item.MetroQuadrado,
         material_cut: item.MaterialCorte,
-        material_border: item.MaterialBorda
+        material_border: item.MaterialBorda,
+        cliente: item.Cliente,
       })),
       skipDuplicates: true,
     });

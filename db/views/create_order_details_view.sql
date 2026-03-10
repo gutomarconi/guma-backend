@@ -16,14 +16,16 @@ WITH item_machine AS (
     i.order_date,
     i.order_delivery_date,
     i."companyId" AS company_id,
-
     m.id AS machine_id,
     p.description AS machine_description,
 
     CASE
       WHEN ih.id IS NOT NULL THEN 'DONE'
       ELSE 'PENDING'
-    END AS machine_status
+    END AS machine_status,
+    i.cliente,
+    ih."readDate",
+    i.load_number
 
   FROM public."Item" i
 
@@ -61,7 +63,8 @@ order_totals AS (
     COUNT(*) FILTER (WHERE machine_description = 'Borda' and has_bordering_po = true AND machine_status = 'DONE') AS border_done,
 
     COUNT(*) FILTER (WHERE machine_description = 'Embalagem' and has_packaging_po = true) AS packing_total,
-    COUNT(*) FILTER (WHERE machine_description = 'Embalagem' and has_packaging_po = true AND machine_status = 'DONE') AS packing_done
+    COUNT(*) FILTER (WHERE machine_description = 'Embalagem' and has_packaging_po = true AND machine_status = 'DONE') AS packing_done,
+    load_number
   FROM item_machine
   GROUP BY
     company_id,
@@ -69,12 +72,25 @@ order_totals AS (
     batch_number,
     box_number,
     order_date,
-    order_delivery_date
+    order_delivery_date,
+    load_number
 )
 
 SELECT
-  ot.*,
-
+ot.company_id,
+  ot.order_number,
+  ot.batch_number,
+  ot.box_number,
+  ot.order_date,
+  ot.order_delivery_date,
+  ot.cutting_total,
+  ot.cutting_done,
+  ot.drilling_total,
+  ot.drilling_done,
+  ot.border_total,
+  ot.border_done,
+  ot.packing_total,
+  ot.packing_done,
   CASE
     WHEN
       (cutting_total = 0 OR cutting_done = cutting_total)
@@ -93,10 +109,12 @@ SELECT
       'barcode', im.barcode,
       'machineId', im.machine_id,
       'status', im.machine_status,
-      'machineDescription', im.machine_description
+      'machineDescription', im.machine_description,
+      'readingDate', im."readDate"
     )
     ORDER BY im.item_code, im.machine_id
-  ) AS items
+  ) AS items,
+  ot.load_number
 
 FROM order_totals ot
 JOIN item_machine im
@@ -117,4 +135,5 @@ GROUP BY
   ot.border_total,
   ot.border_done,
   ot.packing_total,
-  ot.packing_done;
+  ot.packing_done,
+  ot.load_number;
