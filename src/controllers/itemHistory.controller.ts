@@ -52,6 +52,8 @@ export const createItemHistories = async (req: Request, res: Response) => {
   const itemHistories: ICreateItemHistory[] = req.body;
 
   if (!itemHistories || itemHistories.length === 0) return res.status(400).json({ errors: "Dados inválidos" });
+  const [first] = itemHistories;
+  console.log('vai inserir item history', first.barcode, first.machineId, first.readDate)
   try {
     const createdHistories = [];
     for (const itemHistory of itemHistories) {
