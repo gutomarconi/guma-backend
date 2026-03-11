@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW public.vw_order_machine_detail AS
 WITH item_machine AS (
   SELECT
-    i.id AS item_id,
+    distinct(i.id) AS item_id,
     i.item_code AS item_code,
     i.description AS item_description,
     i.barcode,
@@ -64,7 +64,8 @@ order_totals AS (
 
     COUNT(*) FILTER (WHERE machine_description = 'Embalagem' and has_packaging_po = true) AS packing_total,
     COUNT(*) FILTER (WHERE machine_description = 'Embalagem' and has_packaging_po = true AND machine_status = 'DONE') AS packing_done,
-    load_number
+    load_number,
+    cliente
   FROM item_machine
   GROUP BY
     company_id,
@@ -73,7 +74,8 @@ order_totals AS (
     box_number,
     order_date,
     order_delivery_date,
-    load_number
+    load_number,
+    cliente
 )
 
 SELECT
@@ -114,7 +116,8 @@ ot.company_id,
     )
     ORDER BY im.item_code, im.machine_id
   ) AS items,
-  ot.load_number
+  ot.load_number,
+  ot.cliente
 
 FROM order_totals ot
 JOIN item_machine im
@@ -136,4 +139,5 @@ GROUP BY
   ot.border_done,
   ot.packing_total,
   ot.packing_done,
-  ot.load_number;
+  ot.load_number,
+  ot.cliente;
