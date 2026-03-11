@@ -61,6 +61,8 @@ model Machine {
   capacity_unity CapacityUnity @default(M2)
   unity_cost     Float
   po             PO            @relation(fields: [poId], references: [id])
+
+  @@index([poId], map: "idx_machine_poid")
 }
 
 model Item {
@@ -90,6 +92,8 @@ model Item {
   material_cut        String      @default("")
   material_border     String      @default("")
   cliente             String      @default("")
+
+  @@index([companyId, order_date, order_number], map: "idx_item_company_orderdate_ordernumber")
 }
 
 model ItemHistory {
@@ -100,6 +104,8 @@ model ItemHistory {
   machineId Int
   createdAt DateTime      @default(now())
   readDate  DateTime      @default(now())
+
+  @@index([itemId, machineId], map: "idx_itemhistory_item_machine")
 }
 
 model FileMapping {
