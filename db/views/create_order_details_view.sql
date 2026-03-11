@@ -42,7 +42,7 @@ WITH item_machine AS (
 
   LEFT JOIN public."ItemHistory" ih
     ON ih."itemId" = i.id
-   AND ih."machineId" = m.id
+   AND ih."machineId" in (select m.id from public."Machine" m where m."poId" = p.id) 
 ),
 
 order_totals AS (
