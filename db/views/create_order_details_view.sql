@@ -19,30 +19,41 @@ WITH item_machine AS (
     m.id AS machine_id,
     p.description AS machine_description,
 
-    CASE
-      WHEN ih.id IS NOT NULL THEN 'DONE'
-      ELSE 'PENDING'
-    END AS machine_status,
+	CASE
+WHEN EXISTS (
+  SELECT 1
+  FROM "ItemHistory" ih
+  JOIN "Machine" m2
+    ON m2.id = ih."machineId"
+  WHERE ih."itemId" = i.id
+    AND m2."poId" = p.id
+)
+THEN 'DONE'
+ELSE 'PENDING'
+END AS machine_status,
     i.cliente,
     ih."readDate",
     i.load_number
 
   FROM public."Item" i
 
-  JOIN "Machine" m
+  JOIN public."Machine" m
     ON m."companyId" = i."companyId"
 
-  JOIN "PO" p
+  JOIN public."PO" p
     ON p.id = m."poId"
-   AND (
-      (p.description = 'Corte' AND i.has_cutting_po)
-   OR (p.description = 'Furação' AND i.has_drilling_po)
-   OR (p.description = 'Borda' AND i.has_bordering_po)
-   OR (p.description = 'Embalagem' AND i.has_packaging_po))
-
+   
   LEFT JOIN public."ItemHistory" ih
     ON ih."itemId" = i.id
-   AND ih."machineId" in (select m.id from public."Machine" m where m."poId" = p.id) 
+   AND ih."machineId" = M.id
+
+ WHERE
+(
+ (p.description = 'Corte' AND i.has_cutting_po)
+ OR (p.description = 'Furação' AND i.has_drilling_po)
+ OR (p.description = 'Borda' AND i.has_bordering_po)
+ OR (p.description = 'Embalagem' AND i.has_packaging_po)
+)
 ),
 
 order_totals AS (
