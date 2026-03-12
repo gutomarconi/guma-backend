@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  getActiveOrders,
   getOrderDetails, getOrdersSummary, getOrdersTotals
 } from '../controllers/orders.controller';
 
@@ -25,5 +26,5 @@ const router = Router();
 router.post('/orders-details', getOrderDetails);
 router.get('/orders-totals/', getOrdersTotals);
 router.post('/orders-summary', getOrdersSummary)
-
+router.post('/active-orders', getActiveOrders);
 export default router;

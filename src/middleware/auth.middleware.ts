@@ -44,7 +44,6 @@ export default async function authMiddleware(req: AuthRequest, res: Response, ne
       };
       return next();
     }
-    console.log( 'aquii')
     return res.status(401).json({ error: "Unauthorized" });
   } catch (err) {
     console.error(err);

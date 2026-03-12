@@ -23,8 +23,6 @@ router.post("/register", async (req, res) => {
 // login
 router.post("/login", async (req, res) => {
   const { email, senha } = req.body;
-  console.log(email, senha)
-  console.log(await bcrypt.hash('superadmin', 10));
   if (!email || !senha) return res.status(400).json({ error: "email and senha obrigatórios" });
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return res.status(401).json({ error: "Credenciais inválidas" });

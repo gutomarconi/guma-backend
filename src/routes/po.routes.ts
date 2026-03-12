@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getPOs, createPO, updatePO, deletePO } from '../controllers/po.controller';
+import { getPOs, createPO, updatePO, deletePO, getPOStats } from '../controllers/po.controller';
 
 const router = Router();
 
@@ -14,5 +14,7 @@ router.get('/', getPOs);
 router.post('/', createPO);
 router.patch('/:id', updatePO);
 router.delete('/:id', deletePO);
+router.post('/:id/stats', getPOStats);
+
 
 export default router;

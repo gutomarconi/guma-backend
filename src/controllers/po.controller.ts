@@ -52,3 +52,75 @@ export const deletePO = async (req: Request, res: Response) => {
     }
   }
 };
+
+export const getPOStats = async (req: Request, res: Response) => {
+    const { startDate, endDate } = req.body;
+    const { id } = req.params;
+    const { companyId } = req.user;
+
+    if (!startDate || !endDate || !id) {
+        return res.status(400).json({ error: 'Date filters and/or machine id are missing' });
+    }
+
+    try {
+      const result = await prisma.$queryRaw<{
+        id: number;
+        dailyCapacity: number,
+        unityCost: number,
+        capacityUnity: string,
+        totalDone: number,
+        itemMetric: number
+      }[]>`
+        select m.id, m.capacity AS "dailyCapacity",
+          m.unity_cost AS "unityCost",
+          m.capacity_unity AS "capacityUnity",
+		      count(ih.id) as "totalDone",
+		      AVG(CASE
+            WHEN m.capacity_unity = 'M2' THEN i.square_meter
+            WHEN m.capacity_unity = 'M3' THEN i.cubic_meter
+            WHEN m.capacity_unity = 'M'  THEN i.linear_meter
+            ELSE 1
+          END) AS "itemMetric"
+          from public."ItemHistory" ih 
+          inner join public."Item" i on i.id = ih."itemId"
+          inner join public."Machine" m on m.id = ih."machineId"
+          where ih."readDate" BETWEEN ${startDate}::date AND ${endDate}::date
+          and m."poId" = ${Number(id)} 
+          and m."companyId" = ${Number(companyId)} 
+          and i."companyId" = ${Number(companyId)} 
+          group by m.id
+      `;
+
+      const totals = result.reduce(
+        (acc, m) => {
+          acc.dailyCapacity += m.dailyCapacity
+          acc.totalDone = BigInt(acc.totalDone) + BigInt(m.totalDone)
+          acc.itemMetric += m.itemMetric
+          acc.unitCost += m.unityCost
+          acc.capacityUnity = m.capacityUnity
+          return acc
+        },
+        {
+          dailyCapacity: 0,
+          totalDone: 0n,
+          itemMetric: 0,
+          unitCost: 0,
+          capacityUnity: ''
+        }
+      )
+
+      const response = {
+        dailyCapacity: totals.dailyCapacity,
+        totalDone: Number(totals.totalDone),
+        itemMetric: Number(totals.itemMetric.toFixed(2)),
+        unityCost: totals.unitCost,
+        capacityUnity: 'M2',
+      }
+
+      res.status(200).json(response);
+    } catch(err:any) {
+        console.log(err)
+        res.status(500).json({ error: 'Erro ao tentar buscar pedidos' });
+    }
+};
+

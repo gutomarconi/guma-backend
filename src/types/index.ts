@@ -27,3 +27,21 @@ export interface ICreateItemHistory {
   machineId: string;
   readDate: string;
 }
+
+export interface IItemModel {
+  id: number,
+  item_code: string,
+  description: string,
+  barcode: string,
+  order_number: number,
+  batch_number: number,
+  box_number: number | null,
+  order_date: Date,
+  order_delivery_date: Date,
+  cliente: string,
+  load_number: string,
+  has_cutting_po: boolean,
+  has_drilling_po: boolean,
+  has_bordering_po: boolean,
+  has_packaging_po: boolean
+}

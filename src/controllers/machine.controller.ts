@@ -77,7 +77,6 @@ export const getMachineStats = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { companyId } = req.user;
 
-    console.log(startDate, endDate, id, companyId)
     if (!startDate || !endDate || !id) {
         return res.status(400).json({ error: 'Date filters and/or machine id are missing' });
     }

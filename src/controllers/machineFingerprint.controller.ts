@@ -16,7 +16,6 @@ export const getMachineFingerprint = async (req: Request, res: Response) => {
   if (id) where.id = Number(id);
 
   const result = await prisma.machineFingerprint.findFirst({ where });
-  console.log(result)
   res.json(result);
 };
 
@@ -28,7 +27,6 @@ export const getMachineFingerprints = async (req: Request, res: Response) => {
   if (id) where.machineId = Number(id);
 
   const result = await prisma.machineFingerprint.findMany({ where });
-  console.log(result)
   res.json(result);
 };
 

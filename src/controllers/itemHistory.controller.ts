@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../prisma';
+import { Prisma, prisma } from '../prisma';
 import { getItemByBarcode } from '../services/itemService';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ICreateItemHistory } from '../types';
@@ -52,23 +52,42 @@ export const createItemHistories = async (req: Request, res: Response) => {
   const itemHistories: ICreateItemHistory[] = req.body;
 
   if (!itemHistories || itemHistories.length === 0) return res.status(400).json({ errors: "Dados inválidos" });
-  const [first] = itemHistories;
-  console.log('vai inserir item history', first.barcode, first.machineId, first.readDate)
+
   try {
     const createdHistories = [];
     for (const itemHistory of itemHistories) {
       const { barcode, machineId } = itemHistory;
       if (barcode && machineId) {
         const item = await getItemByBarcode(barcode);
-        const history = await prisma.itemHistory.create({ data: {
-          machineId: Number(machineId),
-          itemId: Number(item?.id),
-          companyId: Number(req.user?.companyId),
-          readDate: itemHistory.readDate
-        }});
-        createdHistories.push(history);
+        if (item?.id) {
+          createdHistories.push({
+            machineId: Number(machineId),
+            itemId: Number(item?.id),
+            companyId: Number(req.user?.companyId),
+            readDate: itemHistory.readDate
+          })
+        }
       }
     }
+    await prisma.itemHistory.createMany({ data: createdHistories, skipDuplicates: true, });
+    const itemIds = [...new Set(createdHistories.map(r => r.itemId))]
+    await prisma.$executeRaw`
+      UPDATE "OrderStats" os
+      SET items_done = os.items_done + sub.count_done,
+          last_read_date = NOW()
+      FROM (
+        SELECT
+          i."companyId" AS company_id,
+          i.order_number,
+          COUNT(DISTINCT ih."itemId") AS count_done
+        FROM "ItemHistory" ih
+        JOIN "Item" i ON i.id = ih."itemId"
+        WHERE ih."itemId" = ANY(${itemIds})
+        GROUP BY i."companyId", i.order_number
+      ) sub
+      WHERE os."companyId" = sub.company_id
+      AND os.order_number = sub.order_number
+    `
     res.status(201).json(createdHistories);
   } catch (error: unknown) {
       res.status(500).json({ error: 'Erro ao registrar históricos' });

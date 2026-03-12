@@ -88,6 +88,10 @@ export const createItems = async (req: Request, res: Response) => {
       });
     }
 
+    if (items.length > 300) {
+      throw new Error("Maximum 300 items per request")
+    }
+
     // opcional: validação mínima de campos obrigatórios
     for (const item of items) {
       if (!item.NroPedido || !item.Peca || !item.CodigoBarras) {
@@ -125,6 +129,30 @@ export const createItems = async (req: Request, res: Response) => {
       })),
       skipDuplicates: true,
     });
+
+    const orderNumbers = [...new Set(items.map(item => Number(item.NroPedido)))];
+
+    await prisma.$executeRaw`
+      INSERT INTO "OrderStats" (
+        "companyId",
+        order_number,
+        delivery_date,
+        total_items,
+        items_done
+      )
+      SELECT
+        "companyId",
+        order_number,
+        MIN(order_delivery_date),
+        COUNT(*),
+        0
+      FROM "Item"
+      WHERE order_number IN (${Prisma.join(orderNumbers, ',')}) ${Prisma.sql`and "companyId" = ${Number(req.user?.companyId)}`}
+      GROUP BY "companyId", order_number
+      ON CONFLICT ("companyId", order_number)
+      DO UPDATE SET
+        total_items = "OrderStats".total_items + EXCLUDED.total_items
+    `;
 
     return res.status(201).json({
       message: 'Itens criados com sucesso',
