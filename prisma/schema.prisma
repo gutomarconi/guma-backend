@@ -94,6 +94,7 @@ model Item {
   cliente             String      @default("")
 
   @@index([companyId, order_date, order_number], map: "idx_item_company_orderdate_ordernumber")
+  @@unique([barcode], map: "idx_item_barcode_unique")
 }
 
 model ItemHistory {
