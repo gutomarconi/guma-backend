@@ -351,7 +351,7 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
               machineDescription: machine.po.description,
               status: done ? "DONE" : "PENDING",
               poId: machine.poId,
-              readingDate: readingDate.toISOString()
+              readingDate: readingDate ? readingDate.toISOString() : undefined
             });
           } else {
             resultItems[indexOfItem] = {
