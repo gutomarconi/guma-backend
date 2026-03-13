@@ -319,13 +319,18 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
           if (!required) continue;
 
           const key = `${item.id}_${machine.id}`;
-
+          const historyRecord = historyMap.get(key);
           const done =
-            historyMap.has(key) ||
+            historyRecord ||
             history.some(h =>
               h.itemId === item.id &&
               machines.find(m => m.id === h.machineId)?.poId === machine.poId
             );
+          const readingDate = historyRecord ?
+            history.find(h =>
+              h.itemId === item.id &&
+              machines.find(m => m.id === h.machineId)?.poId === machine.poId
+            ).readDate : undefined;
 
           if (poStatus) {
             const poStatusList = poStatusMap.get(machine.po.id);
@@ -345,7 +350,8 @@ export const getOrderDetails = async (req: Request<{}, {}, GetOrderDetailsBody>,
               machineId: machine.id,
               machineDescription: machine.po.description,
               status: done ? "DONE" : "PENDING",
-              poId: machine.poId
+              poId: machine.poId,
+              readingDate: readingDate.toISOString()
             });
           } else {
             resultItems[indexOfItem] = {
