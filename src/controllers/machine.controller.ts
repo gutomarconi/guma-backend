@@ -101,7 +101,7 @@ export const getMachineStats = async (req: Request, res: Response) => {
 
         LEFT JOIN "ItemHistory" ih
           ON ih."machineId" = m.id
-          AND ih."readDate" BETWEEN ${startDate}::date AND ${endDate}::date
+          AND ih."readDate" BETWEEN ${startDate}::date AND (${endDate}::date + interval '1 day')
 
         LEFT JOIN "Item" i
           ON i.id = ih."itemId"

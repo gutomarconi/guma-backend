@@ -69,13 +69,15 @@ export const getPOStats = async (req: Request, res: Response) => {
         unityCost: number,
         capacityUnity: string,
         totalDone: number,
-        itemMetric: number
+        itemMetric: number,
+        itemSquareMeter: number,
       }[]>`
         select m.id, m.capacity AS "dailyCapacity",
           m.unity_cost AS "unityCost",
           m.capacity_unity AS "capacityUnity",
 		      count(ih.id) as "totalDone",
-		      AVG(CASE
+          sum(i.square_meter) as "itemSquareMeter",
+		      sum(CASE
             WHEN m.capacity_unity = 'M2' THEN i.square_meter
             WHEN m.capacity_unity = 'M3' THEN i.cubic_meter
             WHEN m.capacity_unity = 'M'  THEN i.linear_meter
@@ -98,7 +100,8 @@ AND ih."readDate" < (${endDate}::date + interval '1 day')
           acc.totalDone = BigInt(acc.totalDone) + BigInt(m.totalDone)
           acc.itemMetric += m.itemMetric
           acc.unitCost += m.unityCost
-          acc.capacityUnity = m.capacityUnity
+          acc.capacityUnity = m.capacityUnity,
+          acc.itemSquareMeter = m.itemSquareMeter
           return acc
         },
         {
@@ -106,7 +109,8 @@ AND ih."readDate" < (${endDate}::date + interval '1 day')
           totalDone: 0n,
           itemMetric: 0,
           unitCost: 0,
-          capacityUnity: ''
+          capacityUnity: '',
+          itemSquareMeter: 0,
         }
       )
 
@@ -115,7 +119,7 @@ AND ih."readDate" < (${endDate}::date + interval '1 day')
         totalDone: Number(totals.totalDone),
         itemMetric: Number(totals.itemMetric.toFixed(2)),
         unityCost: totals.unitCost,
-        capacityUnity: 'M2',
+        capacityUnity: totals.capacityUnity,
       }
 
       res.status(200).json(response);
