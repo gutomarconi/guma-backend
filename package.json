@@ -11,6 +11,9 @@
     "prisma:migrate": "prisma migrate deploy",
     "db:views": "for f in db/views/*.sql; do psql \"$DATABASE_URL\" -f \"$f\"; done"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@prisma/client": "^5.0.0",
     "@types/multer": "^2.0.0",
