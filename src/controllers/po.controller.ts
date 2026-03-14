@@ -120,6 +120,7 @@ AND ih."readDate" < (${endDate}::date + interval '1 day')
         itemMetric: Number(totals.itemMetric.toFixed(2)),
         unityCost: totals.unitCost,
         capacityUnity: totals.capacityUnity,
+        itemSquareMeter: totals.itemSquareMeter
       }
 
       res.status(200).json(response);
