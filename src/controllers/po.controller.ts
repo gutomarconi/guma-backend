@@ -101,7 +101,7 @@ AND ih."readDate" < (${endDate}::date + interval '1 day')
           acc.itemMetric += m.itemMetric
           acc.unitCost += m.unityCost
           acc.capacityUnity = m.capacityUnity,
-          acc.itemSquareMeter = m.itemSquareMeter
+          acc.itemSquareMeter += m.itemSquareMeter
           return acc
         },
         {
