@@ -84,7 +84,8 @@ export const getPOStats = async (req: Request, res: Response) => {
           from public."ItemHistory" ih 
           inner join public."Item" i on i.id = ih."itemId"
           inner join public."Machine" m on m.id = ih."machineId"
-          where ih."readDate" BETWEEN ${startDate}::date AND ${endDate}::date
+          where ih."readDate" >= ${startDate}::date
+AND ih."readDate" < (${endDate}::date + interval '1 day')
           and m."poId" = ${Number(id)} 
           and m."companyId" = ${Number(companyId)} 
           and i."companyId" = ${Number(companyId)} 
