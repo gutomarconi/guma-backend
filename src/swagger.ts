@@ -1,50 +1,16 @@
-import path from 'path';
-import swaggerJSDoc from 'swagger-jsdoc';
-
-// Registra ts-node para ler .ts
-require('ts-node/register');
+import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 
 const options = {
   definition: {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
-      title: 'GUMA API',
-      version: '1.0.0',
-      description: 'API completa com CRUD para Companies, Users, Items, etc.',
-    },
-    servers: [
-      {
-        url: 'http://localhost:3000',
-        description: 'Servidor local',
-      },
-    ],
-    components: {
-      schemas: {
-        Company: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            name: { type: 'string' },
-            createdAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        User: {
-          type: 'object',
-          properties: {
-            id: { type: 'integer' },
-            name: { type: 'string' },
-            email: { type: 'string' },
-            role: { type: 'string' },
-            companyId: { type: 'integer', nullable: true },
-          },
-        },
-        // Adicione outros schemas aqui se quiser mais detalhes
-      },
+      title: "My API",
+      version: "1.0.0",
     },
   },
-  apis: [
-    path.join(__dirname, 'routes/**/*.ts'),
-  ],
+  apis: ["./src/routes/*.ts"],
 };
 
-export default swaggerJSDoc(options);
+export const swaggerSpec = swaggerJSDoc(options);
+export { swaggerUi };

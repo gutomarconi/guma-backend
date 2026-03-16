@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
   getActiveOrders,
-  getOrderDetails, getOrdersSummary, getOrdersTotals
+  getOrderDetails, getOrderDetailsV2, getOrdersSummary, getOrdersTotals
 } from '../controllers/orders.controller';
 
 const router = Router();
@@ -27,4 +27,5 @@ router.post('/orders-details', getOrderDetails);
 router.get('/orders-totals/', getOrdersTotals);
 router.post('/orders-summary', getOrdersSummary)
 router.post('/active-orders', getActiveOrders);
+router.post('/orders-detailsv2', getOrderDetailsV2)
 export default router;

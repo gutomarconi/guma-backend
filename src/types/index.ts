@@ -45,3 +45,27 @@ export interface IItemModel {
   has_bordering_po: boolean,
   has_packaging_po: boolean
 }
+
+export enum ICapacityUnity {
+  UN = 'UN',
+  M2 = 'M2',
+  M3 = 'M3',
+  M = 'M'
+}
+
+export interface IMachineModel {
+  id: number;
+  companyId: number;
+  description: string;
+  createdAt: Date
+  poId: number
+  capacity: number
+  capacity_unity: string,
+  unity_cost: number;
+  po: IPOModel
+}
+
+export interface IPOModel {
+  id: number;
+  description: string;
+}

@@ -5,7 +5,7 @@ export const createMachineSchema = z.object({
   companyId: z.number().int(),
   poId: z.number().int(),
   capacity: z.number(),
-  capacity_unity: z.enum(['M2', 'UN']).optional(),
+  capacity_unity: z.enum(['M2', 'UN', 'M', 'M3']).optional(),
   unity_cost: z.number(),
 });
 

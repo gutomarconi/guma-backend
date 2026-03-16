@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
-import { Prisma } from '@prisma/client';
-import { number } from 'zod';
-import { IItemModel } from '../types';
+import { IItemModel, IMachineModel } from '../types';
 
 type IOrderDetails = {
 	company_id: number; 
@@ -35,6 +33,27 @@ type IItems = {
 	machineDescription: string; 
 	readingDate?: string; 
   poId: number;
+}
+
+type IItemsV2 = {
+	itemId: number; 
+	code: string; 
+	description: string; 
+	barcode: string; 
+	machineId: number; 
+	status: string; 
+	machineDescription: string; 
+	readingDate?: string; 
+  poId: number;
+  order_number: number; 
+	batch_number: number; 
+	box_number?: number; 
+	order_date: string; 
+	order_delivery_date: string; 
+	order_status: string; 
+	load_number: string; 
+	cliente: string; 
+
 }
 
 // import dayjs from 'dayjs';
@@ -461,3 +480,250 @@ export const getActiveOrders = async (req: Request<{}, {}, GetOrderDetailsBody>,
 
 
 }
+
+interface IOrderStats {
+  cuttingTotal: number,
+  drillingTotal: number,
+  borderingTotal: number,
+  packagingTotal: number,
+  cuttingDone: number,
+  drillingDone: number,
+  borderingDone: number,
+  packagingDone: number,
+}
+
+export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
+  const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus, loadNumber, poID } = req.body;
+    if (!startDate || !endDate || !companyId) {
+        return res.status(400).json({ error: 'Date filters are missing' });
+    }
+    try {
+      const items: IItemModel[] = await prisma.item.findMany({
+        where: {
+          companyId: companyId,
+          order_date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate)
+          },
+          ...(orderNumber && { order_number: Number(orderNumber) }),
+          ...(batchNumber && { batch_number: Number(batchNumber) }),
+          ...(loadNumber && { load_number: String(loadNumber) }),
+          ...(searchItem && {
+            OR: [
+              { barcode: { contains: searchItem } },
+              { item_code: { contains: searchItem } },
+              { description: { contains: searchItem, mode: "insensitive" } }
+            ]
+          })
+        },
+        select: {
+          id: true,
+          item_code: true,
+          description: true,
+          barcode: true,
+          order_number: true,
+          batch_number: true,
+          box_number: true,
+          order_date: true,
+          order_delivery_date: true,
+          cliente: true,
+          load_number: true,
+          has_cutting_po: true,
+          has_drilling_po: true,
+          has_bordering_po: true,
+          has_packaging_po: true
+        }
+      });
+      const poStatusMap = poStatusToMap(poStatus ?? {});
+      const itemIds = items.map(i => i.id)
+
+      const history = await prisma.itemHistory.findMany({
+        where: {
+          itemId: { in: itemIds }
+        },
+        select: {
+          itemId: true,
+          machineId: true,
+          readDate: true
+        }
+      });
+
+      const machines = await prisma.machine.findMany({
+        where: {
+          companyId: companyId,
+          ...(poID && { poId: poID }),
+        },
+        include: {
+          po: true
+        }
+      });
+
+      const machinesById = new Map<number, IMachineModel>(machines.map(m => [m.id, m]));
+      const historyByItemPo = new Map();
+
+      for (const h of history) {
+        const machine = machinesById.get(h.machineId);
+        if (!machine) continue;
+
+        const key = `${h.itemId}_${machine.poId}`;
+        historyByItemPo.set(key, h);
+      }
+
+      const resultItems = new Map<string, IItemsV2>();
+      const orderIds = new Set<number>();
+
+      for (const item of items) {
+
+        for (const machine of machines) {
+
+          const required =
+            (machine.po.description === "Corte" && item.has_cutting_po) ||
+            (machine.po.description === "Furação" && item.has_drilling_po) ||
+            (machine.po.description === "Borda" && item.has_bordering_po) ||
+            (machine.po.description === "Embalagem" && item.has_packaging_po);
+
+          if (!required) continue;
+
+          const key = `${item.id}_${machine.poId}`;
+          const historyRecord = historyByItemPo.get(key);
+
+          const done = !!historyRecord;
+          const readingDate = historyRecord?.readDate;
+
+          if (poStatus) {
+            const poStatusList = poStatusMap.get(machine.po.id);
+            if (poStatusList.length === 1) {
+              const [filteredStatus] = poStatusList;
+              if (filteredStatus === 'DONE' && !done) continue;
+              if (filteredStatus === 'PENDING' && done) continue;
+            }
+          }
+          const resultKey = `${item.id}_${machine.poId}`;
+          const existing = resultItems.get(resultKey);
+          orderIds.add(item.order_number);
+          if (existing) {
+            existing.status = done ? "DONE" : "PENDING";
+          } else {
+            resultItems.set(resultKey, {
+              itemId: item.id,
+              code: item.item_code,
+              description: item.description,
+              barcode: item.barcode,
+              machineId: machine.id,
+              machineDescription: machine.po.description,
+              status: done ? "DONE" : "PENDING",
+              poId: machine.poId,
+              readingDate: readingDate ? readingDate.toISOString() : undefined,
+              batch_number: item.batch_number,
+              cliente: item.cliente,
+              load_number: item.load_number,
+              order_date: item.order_date ? item.order_date.toISOString() : undefined,
+              order_delivery_date: item.order_delivery_date ? item.order_delivery_date.toISOString() : undefined,
+              order_number: item.order_number,
+              order_status: '',
+            });
+            
+          }
+
+        }
+      }
+      const orderStats: Record<string, IOrderStats> = {}
+      for (const ri of resultItems.values()) {
+        const order = ri.order_number
+
+        if (!orderStats[order]) {
+          orderStats[order] = {
+            cuttingTotal: 0,
+            drillingTotal: 0,
+            borderingTotal: 0,
+            packagingTotal: 0,
+            cuttingDone: 0,
+            drillingDone: 0,
+            borderingDone: 0,
+            packagingDone: 0,
+          }
+        }
+
+        const stats = orderStats[order]
+
+        switch (ri.machineDescription) {
+          case "Corte":
+            stats.cuttingTotal++
+            if (ri.status === "DONE") stats.cuttingDone++
+            break
+
+          case "Furação":
+            stats.drillingTotal++
+            if (ri.status === "DONE") stats.drillingDone++
+            break
+
+          case "Borda":
+            stats.borderingTotal++
+            if (ri.status === "DONE") stats.borderingDone++
+            break
+
+          case "Embalagem":
+            stats.packagingTotal++
+            if (ri.status === "DONE") stats.packagingDone++
+            break
+        }
+      }
+
+      const orderStatusMap: Record<number, string> = {}
+      for (const order of orderIds.values()) {
+        const stats = orderStats[order]
+        
+        if (!stats) continue
+
+        const cuttingOk = stats.cuttingTotal === stats.cuttingDone
+        const drillingOk = stats.drillingTotal === stats.drillingDone
+        const borderOk = stats.borderingTotal === stats.borderingDone
+        const packingOk = stats.packagingTotal === stats.packagingDone
+
+        orderStatusMap[order] =
+          cuttingOk && drillingOk && borderOk && packingOk
+            ? "DONE"
+            : "PENDING"
+      }
+
+      for (const ri of resultItems.values()) {
+        ri.order_status = orderStatusMap[ri.order_number]
+      }
+
+      // type Row = typeof resultItems[number];
+
+const grouped = new Map<string, any>();
+
+for (const item of resultItems.values()) {
+  const key = item.barcode;
+
+  if (!grouped.has(key)) {
+    grouped.set(key, {
+      barcode: item.barcode,
+      code: item.code,
+      description: item.description,
+      batch_number: item.batch_number,
+      cliente: item.cliente,
+      load_number: item.load_number,
+      order_date: item.order_date,
+      order_delivery_date: item.order_delivery_date,
+      order_number: item.order_number,
+      order_status: item.order_status,
+    });
+  }
+
+  const row = grouped.get(key);
+
+  row[item.machineDescription] = {
+    status: item.status,
+    machineId: item.machineId,
+    machineDescription: item.machineDescription,
+    readDate: item.readingDate ?? ''
+  };
+}
+      res.status(200).json(Array.from(grouped.values()));
+    } catch(err:any) {
+        console.log(err)
+        res.status(500).json({ error: 'Erro ao tentar buscar pedidos' });
+    }
+};
