@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { IItemModel, IMachineModel } from '../types';
+import dayjs from 'dayjs';
 
 type IOrderDetails = {
 	company_id: number; 
@@ -53,7 +54,10 @@ type IItemsV2 = {
 	order_status: string; 
 	load_number: string; 
 	cliente: string; 
-
+  has_cutting_po: boolean,
+  has_bordering_po: boolean,
+  has_drilling_po: boolean,
+  has_packaging_po: boolean
 }
 
 // import dayjs from 'dayjs';
@@ -499,6 +503,11 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
     if (!startDate || !endDate || !companyId) {
         return res.status(400).json({ error: 'Date filters are missing' });
     }
+    const pos = await prisma.pO.findMany({
+        where: {
+          companyId: companyId,
+        },
+      });
     try {
       const items: IItemModel[] = await prisma.item.findMany({
         where: {
@@ -578,7 +587,6 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
         for (const machine of machines) {
           const poStatusList = poStatusMap.get(machine.po.id);
-
           const required =
             (machine.po.description === "Corte" && item.has_cutting_po && poStatusList.length > 0) ||
             (machine.po.description === "Furação" && item.has_drilling_po && poStatusList.length > 0) ||
@@ -592,15 +600,6 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
           const done = !!historyRecord;
           const readingDate = historyRecord?.readDate;
-
-          if (poStatus) {
-            const poStatusList = poStatusMap.get(machine.po.id);
-            if (poStatusList.length === 1) {
-              const [filteredStatus] = poStatusList;
-              if (filteredStatus === 'DONE' && !done) continue;
-              if (filteredStatus === 'PENDING' && done) continue;
-            }
-          }
           const resultKey = `${item.id}_${machine.poId}`;
           const existing = resultItems.get(resultKey);
           orderIds.add(item.order_number);
@@ -624,6 +623,11 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
               order_delivery_date: item.order_delivery_date ? item.order_delivery_date.toISOString() : undefined,
               order_number: item.order_number,
               order_status: '',
+              has_cutting_po: item.has_cutting_po,
+              has_bordering_po: item.has_bordering_po,
+              has_drilling_po: item.has_drilling_po,
+              has_packaging_po: item.has_packaging_po
+
             });
             
           }
@@ -712,17 +716,34 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
             order_delivery_date: item.order_delivery_date,
             order_number: item.order_number,
             order_status: item.order_status,
+            has_cutting_po: item.has_cutting_po,
+            has_bordering_po: item.has_bordering_po,
+            has_drilling_po: item.has_drilling_po,
+            has_packaging_po: item.has_packaging_po
+
           });
         }
 
         const row = grouped.get(key);
-
         row[item.machineDescription] = {
           status: item.status,
           machineId: item.machineId,
           machineDescription: item.machineDescription,
           readDate: item.readingDate ?? ''
         };
+      }
+      if (poStatus) {
+        for (const item of grouped.values()) {
+          for (const po of pos) {
+            const poStatusList = poStatusMap.get(po.id);
+            if (poStatusList.length === 1) {
+              const [filteredStatus] = poStatusList;
+              if (item[po.description].status !== filteredStatus) {
+                grouped.delete(item.barcode)
+              }
+            }
+          }
+        }
       }
       res.status(200).json(Array.from(grouped.values()));
     } catch(err:any) {
@@ -741,10 +762,6 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
       const items: IItemModel[] = await prisma.item.findMany({
         where: {
           companyId: companyId,
-          order_date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
-          },
           ...(orderNumber && { order_number: Number(orderNumber) }),
           ...(batchNumber && { batch_number: Number(batchNumber) }),
           ...(loadNumber && { load_number: String(loadNumber) }),
@@ -776,10 +793,14 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
       });
       const poStatusMap = poStatusToMap(poStatus ?? {});
       const itemIds = items.map(i => i.id)
-
       const history = await prisma.itemHistory.findMany({
         where: {
-          itemId: { in: itemIds }
+          itemId: { in: itemIds },
+          readDate: {
+            gte: new Date(startDate),
+            lte: dayjs(endDate).add(1, 'day').toDate()
+          },
+
         },
         select: {
           itemId: true,
@@ -811,7 +832,6 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
 
       const resultItems = new Map<string, IItemsV2>();
       const orderIds = new Set<number>();
-
       for (const item of items) {
 
         for (const machine of machines) {
@@ -863,10 +883,12 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
               order_delivery_date: item.order_delivery_date ? item.order_delivery_date.toISOString() : undefined,
               order_number: item.order_number,
               order_status: '',
-            });
-            
+              has_cutting_po: machine.po.description === "Corte" && item.has_cutting_po,
+              has_bordering_po: machine.po.description === "Borda" && item.has_bordering_po,
+              has_drilling_po: machine.po.description === "Furação" && item.has_drilling_po,
+              has_packaging_po: machine.po.description === "Embalagem" && item.has_packaging_po
+            });            
           }
-
         }
       }
       const orderStats: Record<string, IOrderStats> = {}
@@ -951,6 +973,10 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
             order_delivery_date: item.order_delivery_date,
             order_number: item.order_number,
             order_status: item.order_status,
+            has_cutting_po: item.has_cutting_po,
+            has_bordering_po: item.has_bordering_po,
+            has_drilling_po: item.has_drilling_po,
+            has_packaging_po: item.has_packaging_po
           });
         }
 

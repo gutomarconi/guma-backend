@@ -3,6 +3,8 @@ import { prisma } from '../prisma';
 import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
 import bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
+import crypto from "node:crypto";
+import { sendResetEmail } from '../services/EmailService';
 
 /**
  * @swagger
@@ -77,3 +79,130 @@ export const deleteUser = async (req: Request, res: Response) => {
     }
   }
 };
+
+export function generateResetToken() {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 min
+
+  return {
+    token,
+    tokenHash,
+    expiresAt,
+  };
+}
+
+export async function forgotPassword(req, res) {
+  const { email } = req.body;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  // Sempre responde igual (anti-enumeração)
+  if (!user) {
+    console.log( 'nao achou user')
+    return res.json({
+      message: "Se o email existir, você receberá instruções.",
+    });
+  }
+
+  await prisma.passwordResetToken.updateMany({
+    where: {
+      userId: user.id,
+      usedAt: null,
+    },
+    data: {
+      usedAt: new Date(),
+    },
+  });
+
+  const { token, tokenHash, expiresAt } = generateResetToken();
+
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+    },
+  });
+
+  await sendResetEmail(user.email, token);
+
+  return res.json({
+    message: "Se o email existir, você receberá instruções.",
+  });
+}
+
+export async function resetPassword(req, res) {
+  const { token, newPassword } = req.body;
+
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  const record = await prisma.passwordResetToken.findFirst({
+    where: {
+      tokenHash,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: {
+      userId: true,
+      id: true
+    }
+    // include: { userId: true },
+  });
+
+  if (!record) {
+    return res.status(400).json({
+      message: "Token inválido ou expirado",
+    });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: Number(record.userId) },
+      data: { senha: passwordHash },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+
+  return res.json({
+    message: "Senha redefinida com sucesso",
+  });
+}
+
+export async function validateResetToken(req, res) {
+  const { token } = req.query;
+
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  const record = await prisma.passwordResetToken.findFirst({
+    where: {
+      tokenHash,
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+
+  if (!record) {
+    return res.status(400).json({ valid: false });
+  }
+
+  return res.json({ valid: true });
+}

@@ -3,6 +3,7 @@ import prisma from "../prisma";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { forgotPassword, resetPassword, validateResetToken } from "../controllers/user.controller";
 
 dotenv.config();
 
@@ -49,4 +50,9 @@ router.post("/register-superadmin", async (req, res) => {
   const token = jwt.sign({ userId: superadmin.id, role: superadmin.role }, JWT_SECRET, { expiresIn: "1h" });
   res.status(201).json({ token });
 });
+
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+router.post('/validate-reset-token', validateResetToken);
+
 export default router;

@@ -150,3 +150,12 @@ model ItemHistoryFailed {
 
   @@index([companyId, machineId], map: "idx_itemhistoryfailed_company_machine")
 }
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  userId     Int
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+}
