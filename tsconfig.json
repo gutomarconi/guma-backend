@@ -7,7 +7,7 @@
     "strict": false,
     "esModuleInterop": true,
     "moduleDetection": "force",
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     // "baseUrl": "./",
