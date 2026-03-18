@@ -57,7 +57,8 @@ type IItemsV2 = {
   has_cutting_po: boolean,
   has_bordering_po: boolean,
   has_drilling_po: boolean,
-  has_packaging_po: boolean
+  has_packaging_po: boolean,
+  machineName: string
 }
 
 // import dayjs from 'dayjs';
@@ -138,7 +139,8 @@ type GetOrderDetailsBody = {
   status?: string[];
   searchItem?: string;
   poStatus?: Record<string, string[]>;
-  poID?: number
+  poID?: number;
+  machineId?: number
 };
 
 
@@ -613,6 +615,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
               barcode: item.barcode,
               machineId: machine.id,
               machineDescription: machine.po.description,
+              machineName: machine.description,
               status: done ? "DONE" : "PENDING",
               poId: machine.poId,
               readingDate: readingDate ? readingDate.toISOString() : undefined,
@@ -729,7 +732,8 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
           status: item.status,
           machineId: item.machineId,
           machineDescription: item.machineDescription,
-          readDate: item.readingDate ?? ''
+          readDate: item.readingDate ?? '',
+          machineName: item.machineName
         };
       }
       if (poStatus) {
@@ -754,7 +758,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
 
 export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
-  const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus, loadNumber, poID } = req.body;
+  const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus, loadNumber, poID, machineId } = req.body;
     if (!startDate || !endDate || !companyId || !poID) {
         return res.status(400).json({ error: 'Date/po filters are missing' });
     }
@@ -796,6 +800,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
       const history = await prisma.itemHistory.findMany({
         where: {
           itemId: { in: itemIds },
+          ...(machineId && { machineId: Number(machineId) }),
           readDate: {
             gte: new Date(startDate),
             lte: dayjs(endDate).add(1, 'day').toDate()
@@ -813,6 +818,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
         where: {
           companyId: companyId,
           ...(poID && { poId: poID }),
+          ...(machineId && { machineId: Number(machineId) }),
         },
         include: {
           po: true
@@ -873,6 +879,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
               barcode: item.barcode,
               machineId: machine.id,
               machineDescription: machine.po.description,
+              machineName: machine.description,
               status: done ? "DONE" : "PENDING",
               poId: machine.poId,
               readingDate: readingDate ? readingDate.toISOString() : undefined,
@@ -986,7 +993,8 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
           status: item.status,
           machineId: item.machineId,
           machineDescription: item.machineDescription,
-          readDate: item.readingDate ?? ''
+          readDate: item.readingDate ?? '',
+          machineName: item.machineName
         };
       }
       res.status(200).json(Array.from(grouped.values()));
