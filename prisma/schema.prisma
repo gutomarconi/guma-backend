@@ -24,6 +24,9 @@ model User {
   role      String   @default("user")
   createdAt DateTime @default(now())
   company   Company? @relation(fields: [companyId], references: [id])
+
+  @@index([id], map: "idx_user_id")
+  @@index([companyId], map: "idx_po_companyid")
 }
 
 model ApiKey {
@@ -42,6 +45,8 @@ model PO {
   description String
   createdAt   DateTime  @default(now())
   Machine     Machine[]
+
+  @@index([id], map: "idx_po_id")
 }
 
 enum CapacityUnity {
@@ -62,6 +67,7 @@ model Machine {
   unity_cost     Float
   po             PO            @relation(fields: [poId], references: [id])
 
+  @@index([id], map: "idx_machine_id")
   @@index([poId], map: "idx_machine_poid")
 }
 
