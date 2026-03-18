@@ -818,7 +818,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
         where: {
           companyId: companyId,
           ...(poID && { poId: poID }),
-          ...(machineId && { machineId: Number(machineId) }),
+          ...(machineId && { id: Number(machineId) }),
         },
         include: {
           po: true
@@ -832,12 +832,13 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
         const machine = machinesById.get(h.machineId);
         if (!machine) continue;
 
-        const key = `${h.itemId}_${machine.poId}`;
+        const key = `${h.itemId}_${machine.id}`;
         historyByItemPo.set(key, h);
       }
 
       const resultItems = new Map<string, IItemsV2>();
       const orderIds = new Set<number>();
+
       for (const item of items) {
 
         for (const machine of machines) {
@@ -851,7 +852,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
 
           if (!required) continue;
 
-          const key = `${item.id}_${machine.poId}`;
+          const key = `${item.id}_${machine.id}`;
           const historyRecord = historyByItemPo.get(key);
 
           const done = !!historyRecord;
@@ -866,7 +867,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
               if (filteredStatus === 'PENDING' && done) continue;
             }
           }
-          const resultKey = `${item.id}_${machine.poId}`;
+          const resultKey = `${item.id}_${machine.id}`;
           const existing = resultItems.get(resultKey);
           orderIds.add(item.order_number);
           if (existing) {
@@ -966,7 +967,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
       const grouped = new Map<string, any>();
 
       for (const item of resultItems.values()) {
-        const key = item.barcode;
+        const key = `${item.barcode}_${item.machineId}`;
 
         if (!grouped.has(key)) {
           grouped.set(key, {
@@ -983,7 +984,8 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
             has_cutting_po: item.has_cutting_po,
             has_bordering_po: item.has_bordering_po,
             has_drilling_po: item.has_drilling_po,
-            has_packaging_po: item.has_packaging_po
+            has_packaging_po: item.has_packaging_po,
+            machineId: item.machineId
           });
         }
 
