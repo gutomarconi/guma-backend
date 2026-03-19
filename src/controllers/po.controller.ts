@@ -54,7 +54,7 @@ export const deletePO = async (req: Request, res: Response) => {
 };
 
 export const getPOStats = async (req: Request, res: Response) => {
-    const { startDate, endDate } = req.body;
+    const { startDate, endDate, machineId } = req.body;
     const { id } = req.params;
     const { companyId } = req.user;
 
@@ -91,6 +91,7 @@ AND ih."readDate" < (${endDate}::date + interval '1 day')
           and m."poId" = ${Number(id)} 
           and m."companyId" = ${Number(companyId)} 
           and i."companyId" = ${Number(companyId)} 
+          ${machineId ? Prisma.sql` and m.id = ${machineId}`: Prisma.empty}
           group by m.id
       `;
 
