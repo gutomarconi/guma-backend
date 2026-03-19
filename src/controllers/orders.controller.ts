@@ -742,7 +742,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
             const poStatusList = poStatusMap.get(po.id);
             if (poStatusList.length === 1) {
               const [filteredStatus] = poStatusList;
-              if (item[po.description].status !== filteredStatus) {
+              if (item[po.description]?.status !== filteredStatus) {
                 grouped.delete(item.barcode)
               }
             }
