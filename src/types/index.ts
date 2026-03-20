@@ -44,6 +44,8 @@ export interface IItemModel {
   has_drilling_po: boolean,
   has_bordering_po: boolean,
   has_packaging_po: boolean
+  buy_order: string;
+  material_cut: string;
 }
 
 export enum ICapacityUnity {
