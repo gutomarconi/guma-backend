@@ -41,10 +41,11 @@ model ApiKey {
 
 model PO {
   id          Int       @id @default(autoincrement())
-  companyId   Int
+  companyId   Int       @default(999999)
   description String
   createdAt   DateTime  @default(now())
   Machine     Machine[]
+  routes      ProductRoute[]
 
   @@index([id], map: "idx_po_id")
 }
@@ -123,7 +124,6 @@ model FileMapping {
   updatedAt   DateTime @updatedAt
 }
 
-
 model MachineFingerprint {
   id          Int  @id @default(autoincrement())
   companyId   Int
@@ -158,10 +158,96 @@ model ItemHistoryFailed {
 }
 
 model PasswordResetToken {
-  id         String   @id @default(cuid())
-  userId     Int
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  usedAt     DateTime?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Order {
+  id            Int      @id @default(autoincrement())
+  company_id    Int
+  order_number  Int
+  customer_name String
+  order_date    DateTime
+  delivery_date DateTime
+  buy_order     String
+  load_number   String
+  createdAt     DateTime @default(now())
+  batch_number  Int
+  box_mumber    Int?
+
+  items OrderItem[]
+
+  @@unique([company_id, order_number])
+  @@index([company_id, order_date])
+}
+
+model Product {
+  id              Int    @id @default(autoincrement())
+  company_id      Int
+  item_code       String
+  description     String
+  cubic_meter     Float  @default(0)
+  linear_meter    Float  @default(0)
+  square_meter    Float  @default(0)
+  material_cut    String @default("")
+  material_border String @default("")
+  created_at      DateTime @default(now())
+
+  routes    ProductRoute[]
+  OrderItem OrderItem[]
+
+  @@unique([company_id, item_code])
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  company_id Int
+  order_id   Int
+  product_id Int
+  order      Order   @relation(fields: [order_id], references: [id])
+  product    Product @relation(fields: [product_id], references: [id])
+
+  barcode    String   @unique
+  quantity   Float
+  created_at DateTime @default(now())
+
+  OrderItemHistory OrderItemHistory[]
+
+  @@unique([barcode], map: "idx_orderitem_barcode_unique")
+  @@index([company_id, order_id])
+  @@index([barcode])
+}
+
+model ProductRoute {
+  id         Int @id @default(autoincrement())
+  product_id Int
+  po_id      Int
+  sequence   Int
+  created_at      DateTime @default(now())
+
+  product Product @relation(fields: [product_id], references: [id])
+  po      PO      @relation(fields: [po_id], references: [id])
+
+  @@index([product_id, sequence])
+}
+
+model OrderItemHistory {
+  id            Int      @id @default(autoincrement())
+  company_id    Int
+  order_item_id Int
+  product_id    Int
+  po_id         Int
+  machine_id    Int
+  created_at    DateTime @default(now())
+  read_date     DateTime @default(now())
+
+  orderItem OrderItem @relation(fields: [order_item_id], references: [id])
+
+  @@index([order_item_id])
+  @@index([machine_id, read_date])
+  @@index([po_id])
 }
