@@ -10,10 +10,8 @@ import machineRoutes from "./routes/machine.routes";
 import machineFingerprintRoutes from "./routes/machineFingerprint.routes";
 import authMiddleware from "./middleware/auth.middleware";
 import { tenantMiddleware } from "./middleware/tenant.middleware";
-
-import swaggerUi from 'swagger-ui-express';
-import itemRoutes from './routes/item.routes';
-import itemHistoryRoutes from './routes/itemHistory.routes';
+import itemRoutes from './routes/OrderItems.routes';
+import itemHistoryRoutes from './routes/OrderItemHistory.routes';
 import orderRoutes from './routes/orders.routes';
 
 dotenv.config();

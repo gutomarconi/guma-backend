@@ -1,31 +1,11 @@
 import { Router } from 'express';
 import {
-  getActiveOrders,
-  getOrderDetailsV2, getOrderReadingsByPO, getOrdersSummary, getOrdersTotals
+  getOrderDetailsV2, getOrderReadingsByPO, getOrdersSummary
 } from '../controllers/orders.controller';
 
 const router = Router();
 
-/**
- * @swagger
- * /companies:
- *   get:
- *     summary: Lista empresas com paginação e filtro
- *     tags: [Companies]
- *     parameters:
- *       - in: query
- *         name: page
- *         schema: { type: integer, default: 1 }
- *       - in: query
- *         name: limit
- *         schema: { type: integer, default: 10 }
- *       - in: query
- *         name: name
- *         schema: { type: string }
- */
-router.get('/orders-totals/', getOrdersTotals);
 router.post('/orders-summary', getOrdersSummary)
-router.post('/active-orders', getActiveOrders);
 router.post('/orders-detailsv2', getOrderDetailsV2)
 router.post('/po-readings', getOrderReadingsByPO)
 export default router;

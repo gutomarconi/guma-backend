@@ -63,37 +63,42 @@ export const getPOStats = async (req: Request, res: Response) => {
     }
 
     try {
-      const result = await prisma.$queryRaw<{
-        id: number;
-        dailyCapacity: number,
-        unityCost: number,
-        capacityUnity: string,
-        totalDone: number,
-        itemMetric: number,
-        itemSquareMeter: number,
-      }[]>`
-        select m.id, m.capacity AS "dailyCapacity",
-          m.unity_cost AS "unityCost",
-          m.capacity_unity AS "capacityUnity",
-		      count(ih.id) as "totalDone",
-          sum(i.square_meter) as "itemSquareMeter",
-		      sum(CASE
-            WHEN m.capacity_unity = 'M2' THEN i.square_meter
-            WHEN m.capacity_unity = 'M3' THEN i.cubic_meter
-            WHEN m.capacity_unity = 'M'  THEN i.linear_meter
-            ELSE 1
-          END) AS "itemMetric"
-          from public."ItemHistory" ih 
-          inner join public."Item" i on i.id = ih."itemId"
-          inner join public."Machine" m on m.id = ih."machineId"
-          where ih."readDate" >= ${startDate}::date
-AND ih."readDate" < (${endDate}::date + interval '1 day')
-          and m."poId" = ${Number(id)} 
-          and m."companyId" = ${Number(companyId)} 
-          and i."companyId" = ${Number(companyId)} 
-          ${machineId ? Prisma.sql` and m.id = ${machineId}`: Prisma.empty}
-          group by m.id
-      `;
+      const result = await prisma.$queryRaw<
+  {
+    id: number;
+    dailyCapacity: number;
+    unityCost: number;
+    capacityUnity: string;
+    totalDone: number;
+    itemMetric: number;
+    itemSquareMeter: number;
+  }[]
+>`
+SELECT 
+  m.id,
+  m.capacity AS "dailyCapacity",
+  m.unity_cost AS "unityCost",
+  m.capacity_unity AS "capacityUnity",
+  COUNT(h.id) AS "totalDone",
+  SUM(p.square_meter) AS "itemSquareMeter",
+  SUM(
+    CASE
+      WHEN m.capacity_unity = 'M2' THEN p.square_meter
+      WHEN m.capacity_unity = 'M3' THEN p.cubic_meter
+      WHEN m.capacity_unity = 'M'  THEN p.linear_meter
+      ELSE 1
+    END
+  ) AS "itemMetric"
+FROM "OrderItemHistory" h
+JOIN "Machine" m ON m.id = h.machine_id
+JOIN "Product" p ON p.id = h.product_id
+WHERE h.read_date >= ${startDate}::date
+AND h.read_date < (${endDate}::date + interval '1 day')
+AND m."poId" = ${Number(id)}
+AND m."companyId" = ${Number(companyId)}
+${machineId ? Prisma.sql` AND m.id = ${machineId}` : Prisma.empty}
+GROUP BY m.id
+`;
 
       const totals = result.reduce(
         (acc, m) => {

@@ -3,18 +3,6 @@ import { prisma } from '../prisma';
 import { IItemModel, IMachineModel } from '../types';
 import dayjs from 'dayjs';
 
-type IItems = {
-	itemId: number; 
-	code: string; 
-	description: string; 
-	barcode: string; 
-	machineId: number; 
-	status: string; 
-	machineDescription: string; 
-	readingDate?: string; 
-  poId: number;
-}
-
 type IItemsV2 = {
 	itemId: number; 
 	code: string; 
@@ -42,28 +30,6 @@ type IItemsV2 = {
   material_cut: string;
 }
 
-// import dayjs from 'dayjs';
-/**
- * @swagger
- * tags:
- *   name: Items
- */
-export const getOrdersTotals = async (req: Request, res: Response) => {
-  const { companyId, barcode, order_number } = req.query;
-  const where = {
-    companyId: Number(companyId),
-    ...(barcode ? { barcode: { contains: barcode as string } } : {}),
-    ...(order_number ? { order_number: Number(order_number) } : {}),
-  }
-
-  const items = await prisma.item.findMany({
-    where,
-    // include: { itemHistory: { include: { machine: true } } },
-    orderBy: { order_date: 'desc' },
-  });
-  res.json(items);
-};
-
 export const getOrdersSummary = async (req: Request, res: Response) => {
   const { companyId, startDate, endDate } = req.body;
     if (!companyId) {
@@ -72,29 +38,30 @@ export const getOrdersSummary = async (req: Request, res: Response) => {
       try {
         const result = await prisma.$queryRaw`
             SELECT
-            COUNT(*) AS total_orders,
+              COUNT(*) AS total_orders,
 
-            COUNT(*) FILTER (
-              WHERE items_done = total_items
-            ) AS finished_orders,
+              COUNT(*) FILTER (
+                WHERE items_finished = total_items
+              ) AS finished_orders,
 
-            COUNT(*) FILTER (
-              WHERE items_done = 0
-            ) AS pending_orders,
+              COUNT(*) FILTER (
+                WHERE items_started = 0
+              ) AS pending_orders,
 
-            COUNT(*) FILTER (
-              WHERE items_done > 0
-                AND items_done < total_items
-            ) AS active_orders,
+              COUNT(*) FILTER (
+                WHERE items_started > 0
+                  AND items_finished < total_items
+              ) AS active_orders,
 
-            COUNT(*) FILTER (
-              WHERE delivery_date < CURRENT_DATE
-                AND items_done < total_items
-            ) AS late_orders
+              COUNT(*) FILTER (
+                WHERE delivery_date < CURRENT_DATE
+                  AND items_finished < total_items
+              ) AS late_orders
 
-          FROM "OrderStats"
-          WHERE "companyId" = ${companyId}
-          and delivery_date >= ${startDate}::date and delivery_date <= (${endDate}::date + interval '1 day')
+            FROM "OrderProgress" op
+            JOIN "Order" o ON o.id = op.order_id
+          WHERE op.company_id = ${companyId}
+          and o.delivery_date >= ${startDate}::date and o.delivery_date <= (${endDate}::date + interval '1 day')
           ;
         `;
         const parsed: any[] = JSON.parse(
@@ -143,91 +110,6 @@ const poStatusToMap = (
   return map;
 };
 
-export const getActiveOrders = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
-    const { companyId } = req.body;
-    if (!companyId) {
-        return res.status(400).json({ error: 'companyId is missing' });
-    }
-
-        try {
-      const items: Partial<IItemModel>[] = await prisma.item.findMany({
-        where: {
-          companyId: companyId,
-        },
-        select: {
-          id: true,
-          order_number: true,
-          has_cutting_po: true,
-          has_drilling_po: true,
-          has_bordering_po: true,
-          has_packaging_po: true
-        }
-      });
-      const itemIds = items.map(i => i.id)
-
-      const history = await prisma.itemHistory.findMany({
-        where: {
-          itemId: { in: itemIds }
-        },
-        select: {
-          itemId: true,
-          machineId: true,
-        }
-      });
-
-      const machines = await prisma.machine.findMany({
-        where: {
-          companyId: companyId,
-        },
-        include: {
-          po: true
-        }
-      });
-
-      const historyMap = new Map<string, boolean>();
-      for (const h of history) {
-        historyMap.set(`${h.itemId}_${h.machineId}`, true);
-      }
-
-      const resultItems: IItems[] = [];
-      const ordersMap = new Set();
-
-      for (const item of items) {
-
-        for (const machine of machines) {
-
-        const required =
-          (machine.po.description === "Corte" && item.has_cutting_po) ||
-          (machine.po.description === "Furação" && item.has_drilling_po) ||
-          (machine.po.description === "Borda" && item.has_bordering_po) ||
-          (machine.po.description === "Embalagem" && item.has_packaging_po);
-
-        if (!required) continue;
-
-        const key = `${item.id}_${machine.id}`;
-
-        const done =
-          historyMap.has(key) ||
-          history.some(h =>
-            h.itemId === item.id &&
-            machines.find(m => m.id === h.machineId)?.poId === machine.poId
-          );
-
-          if (!done) {
-            ordersMap.add(item.order_number);
-          }
-        }
-      }
-
-      res.status(200).json(ordersMap.size);
-    } catch(err:any) {
-        console.log(err)
-        res.status(500).json({ error: 'Erro ao tentar buscar pedidos' });
-    }
-
-
-}
-
 interface IOrderStats {
   cuttingTotal: number,
   drillingTotal: number,
@@ -237,6 +119,12 @@ interface IOrderStats {
   drillingDone: number,
   borderingDone: number,
   packagingDone: number,
+}
+
+export interface IHistoryMap {
+    order_item_id: number;
+    machine_id: number;
+    read_date: Date;
 }
 
 export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
@@ -250,58 +138,62 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
         },
       });
     try {
-      const items: IItemModel[] = await prisma.item.findMany({
+      const orderItems = await prisma.orderItem.findMany({
         where: {
-          companyId: companyId,
-          order_date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
+          company_id: companyId,
+          order: {
+            order_date: {
+              gte: new Date(startDate),
+              lte: new Date(endDate),
+            },
+            ...(orderNumber && { order_number: Number(orderNumber) }),
+            ...(batchNumber && { batch_number: Number(batchNumber) }),
+            ...(loadNumber && { load_number: String(loadNumber) }),
           },
-          ...(orderNumber && { order_number: Number(orderNumber) }),
-          ...(batchNumber && { batch_number: Number(batchNumber) }),
-          ...(loadNumber && { load_number: String(loadNumber) }),
           ...(searchItem && {
             OR: [
               { barcode: { contains: searchItem } },
-              { item_code: { contains: searchItem } },
-              { description: { contains: searchItem, mode: "insensitive" } }
+              { product: { item_code: { contains: searchItem } } },
+              { product: { description: { contains: searchItem, mode: "insensitive" } } }
             ]
           })
         },
-        select: {
-          id: true,
-          item_code: true,
-          description: true,
-          barcode: true,
-          order_number: true,
-          batch_number: true,
-          box_number: true,
-          order_date: true,
-          order_delivery_date: true,
-          cliente: true,
-          load_number: true,
-          has_cutting_po: true,
-          has_drilling_po: true,
-          has_bordering_po: true,
-          has_packaging_po: true,
-          buy_order: true,
-          material_cut: true,
+        include: {
+          order: true,
+          product: true,
         }
       });
-      const poStatusMap = poStatusToMap(poStatus ?? {});
-      const itemIds = items.map(i => i.id)
 
-      const history = await prisma.itemHistory.findMany({
+      const productIds = orderItems.map(i => i.product_id);
+
+      const routes = await prisma.productRoute.findMany({
         where: {
-          itemId: { in: itemIds }
+          product_id: { in: productIds }
+        }
+      });
+      const routesByProduct = new Map<number, number[]>();
+
+      for (const r of routes) {
+        if (!routesByProduct.has(r.product_id)) {
+          routesByProduct.set(r.product_id, []);
+        }
+        routesByProduct.get(r.product_id).push(r.po_id);
+      }
+
+      const orderItemIds = orderItems.map(i => i.id);
+
+      const history = await prisma.orderItemHistory.findMany({
+        where: {
+          order_item_id: { in: orderItemIds }
         },
         select: {
-          itemId: true,
-          machineId: true,
-          readDate: true
+          order_item_id: true,
+          machine_id: true,
+          read_date: true
         }
       });
 
+      const poStatusMap = poStatusToMap(poStatus ?? {});
       const machines = await prisma.machine.findMany({
         where: {
           companyId: companyId,
@@ -313,66 +205,62 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
       });
 
       const machinesById = new Map<number, IMachineModel>(machines.map(m => [m.id, m]));
-      const historyByItemPo = new Map();
+      const historyByItemPo = new Map<string, IHistoryMap>();
 
       for (const h of history) {
-        const machine = machinesById.get(h.machineId);
+        const machine = machinesById.get(h.machine_id);
         if (!machine) continue;
 
-        const key = `${h.itemId}_${machine.poId}`;
+        const key = `${h.order_item_id}_${machine.poId}`;
         historyByItemPo.set(key, h);
       }
 
       const resultItems = new Map<string, IItemsV2>();
       const orderIds = new Set<number>();
 
-      for (const item of items) {
+      for (const orderItem of orderItems) {
 
         for (const machine of machines) {
           const poStatusList = poStatusMap.get(machine.po.id);
-          const required =
-            (machine.po.description === "Corte" && item.has_cutting_po && poStatusList.length > 0) ||
-            (machine.po.description === "Furação" && item.has_drilling_po && poStatusList.length > 0) ||
-            (machine.po.description === "Borda" && item.has_bordering_po && poStatusList.length > 0) ||
-            (machine.po.description === "Embalagem" && item.has_packaging_po && poStatusList.length > 0);
-
+          const productRoutes = routesByProduct.get(orderItem.product_id);
+          const required = productRoutes.includes(machine.poId) && poStatusList.length > 0;
           if (!required) continue;
 
-          const key = `${item.id}_${machine.poId}`;
+          const key = `${orderItem.id}_${machine.poId}`;
           const historyRecord = historyByItemPo.get(key);
 
           const done = !!historyRecord;
-          const readingDate = historyRecord?.readDate;
-          const resultKey = `${item.id}_${machine.poId}`;
+          const readingDate = historyRecord?.read_date;
+          const resultKey = `${orderItem.id}_${machine.poId}`;
           const existing = resultItems.get(resultKey);
-          orderIds.add(item.order_number);
+          orderIds.add(orderItem.order.order_number);
           if (existing) {
             existing.status = done ? "DONE" : "PENDING";
           } else {
             resultItems.set(resultKey, {
-              itemId: item.id,
-              code: item.item_code,
-              description: item.description,
-              barcode: item.barcode,
+              itemId: orderItem.id,
+              code: orderItem.product.item_code,
+              description: orderItem.product.description,
+              barcode: orderItem.barcode,
               machineId: machine.id,
               machineDescription: machine.po.description,
               machineName: machine.description,
               status: done ? "DONE" : "PENDING",
               poId: machine.poId,
               readingDate: readingDate ? readingDate.toISOString() : undefined,
-              batch_number: item.batch_number,
-              cliente: item.cliente,
-              load_number: item.load_number,
-              order_date: item.order_date ? item.order_date.toISOString() : undefined,
-              order_delivery_date: item.order_delivery_date ? item.order_delivery_date.toISOString() : undefined,
-              order_number: item.order_number,
+              batch_number: orderItem.order.batch_number,
+              cliente: orderItem.order.customer_name,
+              load_number: orderItem.order.load_number,
+              order_date: orderItem.order.order_date ? orderItem.order.order_date.toISOString() : undefined,
+              order_delivery_date: orderItem.order.delivery_date ? orderItem.order.delivery_date.toISOString() : undefined,
+              order_number: orderItem.order.order_number,
               order_status: '',
-              has_cutting_po: item.has_cutting_po,
-              has_bordering_po: item.has_bordering_po,
-              has_drilling_po: item.has_drilling_po,
-              has_packaging_po: item.has_packaging_po,
-              buy_order: item.buy_order,
-              material_cut: item.material_cut,
+              has_cutting_po: productRoutes.includes(machine.poId),
+              has_bordering_po: productRoutes.includes(machine.poId),
+              has_drilling_po: productRoutes.includes(machine.poId),
+              has_packaging_po: productRoutes.includes(machine.poId),
+              buy_order: orderItem.order.buy_order,
+              material_cut: orderItem.product.material_cut,
             });
             
           }
@@ -506,146 +394,82 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
         return res.status(400).json({ error: 'Date/po filters are missing' });
     }
     try {
-      const items: IItemModel[] = await prisma.item.findMany({
+      const historytest = await prisma.orderItemHistory.findMany({
         where: {
-          companyId: companyId,
-          ...(orderNumber && { order_number: Number(orderNumber) }),
-          ...(batchNumber && { batch_number: Number(batchNumber) }),
-          ...(loadNumber && { load_number: String(loadNumber) }),
-          ...(searchItem && {
-            OR: [
-              { barcode: { contains: searchItem } },
-              { item_code: { contains: searchItem } },
-              { description: { contains: searchItem, mode: "insensitive" } }
-            ]
-          })
-        },
-        select: {
-          id: true,
-          item_code: true,
-          description: true,
-          barcode: true,
-          order_number: true,
-          batch_number: true,
-          box_number: true,
-          order_date: true,
-          order_delivery_date: true,
-          cliente: true,
-          load_number: true,
-          has_cutting_po: true,
-          has_drilling_po: true,
-          has_bordering_po: true,
-          has_packaging_po: true,
-          buy_order: true,
-          material_cut: true,
-        }
-      });
-      const poStatusMap = poStatusToMap(poStatus ?? {});
-      const itemIds = items.map(i => i.id)
-      const history = await prisma.itemHistory.findMany({
-        where: {
-          itemId: { in: itemIds },
-          ...(machineId && { machineId: Number(machineId) }),
-          readDate: {
-            gte: new Date(startDate),
-            lte: dayjs(endDate).add(1, 'day').toDate()
+          machine: {
+            poId: poID,
+            companyId: companyId,
           },
-
-        },
-        select: {
-          itemId: true,
-          machineId: true,
-          readDate: true
-        }
-      });
-
-      const machines = await prisma.machine.findMany({
-        where: {
-          companyId: companyId,
-          ...(poID && { poId: poID }),
-          ...(machineId && { id: Number(machineId) }),
+          read_date: {
+            gte: new Date(startDate),
+            lte: new Date(endDate),
+          },
+          orderItem:{
+            order: {
+              ...(orderNumber && { order_number: Number(orderNumber) }),
+              ...(batchNumber && { batch_number: Number(batchNumber) }),
+              ...(loadNumber && { load_number: String(loadNumber) }),
+            },
+            ...(searchItem && {
+              OR: [
+                { barcode: { contains: searchItem } },
+                { product: { item_code: { contains: searchItem } } },
+                { product: { description: { contains: searchItem, mode: "insensitive" } } }
+              ]
+            })
+            
+          }
         },
         include: {
-          po: true
+          orderItem: {
+            include: {
+              product: true,
+              order: true
+            }
+          },
+          machine: {
+            include: {
+              po: true
+            }
+          }
         }
       });
 
-      const machinesById = new Map<number, IMachineModel>(machines.map(m => [m.id, m]));
-      const historyByItemPo = new Map();
-
-      for (const h of history) {
-        const machine = machinesById.get(h.machineId);
-        if (!machine) continue;
-
-        const key = `${h.itemId}_${machine.id}`;
-        historyByItemPo.set(key, h);
-      }
-
-      const resultItems = new Map<string, IItemsV2>();
       const orderIds = new Set<number>();
+      const resultItems = new Map<string, IItemsV2>();
+      for (const history of historytest) {
+        const resultKey = `${history.order_item_id}_${history.machine.id}`;
 
-      for (const item of items) {
-
-        for (const machine of machines) {
-          const poStatusList = poStatusMap.get(machine.po.id);
-
-          const required =
-            (machine.po.description === "Corte" && item.has_cutting_po && poStatusList.length > 0) ||
-            (machine.po.description === "Furação" && item.has_drilling_po && poStatusList.length > 0) ||
-            (machine.po.description === "Borda" && item.has_bordering_po && poStatusList.length > 0) ||
-            (machine.po.description === "Embalagem" && item.has_packaging_po && poStatusList.length > 0);
-
-          if (!required) continue;
-
-          const key = `${item.id}_${machine.id}`;
-          const historyRecord = historyByItemPo.get(key);
-
-          const done = !!historyRecord;
-          if (!done) continue;
-          const readingDate = historyRecord?.readDate;
-
-          if (poStatus) {
-            const poStatusList = poStatusMap.get(machine.po.id);
-            if (poStatusList.length === 1) {
-              const [filteredStatus] = poStatusList;
-              if (filteredStatus === 'DONE' && !done) continue;
-              if (filteredStatus === 'PENDING' && done) continue;
-            }
-          }
-          const resultKey = `${item.id}_${machine.id}`;
-          const existing = resultItems.get(resultKey);
-          orderIds.add(item.order_number);
-          if (existing) {
-            existing.status = done ? "DONE" : "PENDING";
-          } else {
-            resultItems.set(resultKey, {
-              itemId: item.id,
-              code: item.item_code,
-              description: item.description,
-              barcode: item.barcode,
-              machineId: machine.id,
-              machineDescription: machine.po.description,
-              machineName: machine.description,
-              status: done ? "DONE" : "PENDING",
-              poId: machine.poId,
-              readingDate: readingDate ? readingDate.toISOString() : undefined,
-              batch_number: item.batch_number,
-              cliente: item.cliente,
-              load_number: item.load_number,
-              order_date: item.order_date ? item.order_date.toISOString() : undefined,
-              order_delivery_date: item.order_delivery_date ? item.order_delivery_date.toISOString() : undefined,
-              order_number: item.order_number,
-              order_status: '',
-              has_cutting_po: machine.po.description === "Corte" && item.has_cutting_po,
-              has_bordering_po: machine.po.description === "Borda" && item.has_bordering_po,
-              has_drilling_po: machine.po.description === "Furação" && item.has_drilling_po,
-              has_packaging_po: machine.po.description === "Embalagem" && item.has_packaging_po,
-              buy_order: item.buy_order,
-              material_cut: item.material_cut,
-            });            
-          }
-        }
+        orderIds.add(history.orderItem.order.order_number);
+        resultItems.set(resultKey, {
+          barcode: history.orderItem.barcode,
+          batch_number: history.orderItem.order.batch_number,
+          buy_order: history.orderItem.order.buy_order,
+          cliente: history.orderItem.order.customer_name,
+          code: history.orderItem.product.item_code,
+          description: history.orderItem.product.description,
+          has_bordering_po: true,
+          has_cutting_po: true,
+          has_drilling_po: true,
+          has_packaging_po: true,
+          itemId: history.orderItem.product.id,
+          load_number: history.orderItem.order.load_number,
+          order_date: history.orderItem.order.order_date.toISOString(),
+          order_delivery_date: history.orderItem.order.delivery_date.toISOString(),
+          material_cut: history.orderItem.product.material_cut,
+          machineDescription: history.machine.po.description,
+          machineId: history.machine_id,
+          machineName: history.machine.description,
+          order_number: history.orderItem.order.order_number,
+          order_status: '',
+          poId: history.machine.poId,
+          status: '',
+          box_number: history.orderItem.order.box_mumber,
+          readingDate: history.read_date.toISOString()
+        })
       }
+
+     
       const orderStats: Record<string, IOrderStats> = {}
       for (const ri of resultItems.values()) {
         const order = ri.order_number

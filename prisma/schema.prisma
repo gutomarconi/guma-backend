@@ -67,6 +67,8 @@ model Machine {
   capacity_unity CapacityUnity @default(M2)
   unity_cost     Float
   po             PO            @relation(fields: [poId], references: [id])
+  
+  OrderItemHistory             OrderItemHistory[]
 
   @@index([id], map: "idx_machine_id")
   @@index([poId], map: "idx_machine_poid")
@@ -136,6 +138,7 @@ model Order {
   box_mumber    Int?
 
   items OrderItem[]
+  progress       OrderProgress?
 
   @@unique([company_id, order_number])
   @@index([company_id, order_date])
@@ -189,6 +192,7 @@ model ProductRoute {
   po      PO      @relation(fields: [po_id], references: [id])
 
   @@index([product_id, sequence])
+  @@unique([product_id, po_id])
 }
 
 model OrderItemHistory {
@@ -202,8 +206,41 @@ model OrderItemHistory {
   read_date     DateTime @default(now())
 
   orderItem OrderItem @relation(fields: [order_item_id], references: [id])
+  machine Machine @relation(fields: [machine_id], references: [id])
 
-  @@index([order_item_id])
+  @@index([order_item_id, po_id])
   @@index([machine_id, read_date])
-  @@index([po_id])
+  @@index([po_id, read_date])
+}
+
+model OrderProgress {
+  order_id        Int     @id
+  company_id      Int
+
+  total_items     Int     @default(0)
+
+  cutting_total   Int     @default(0)
+  cutting_done    Int     @default(0)
+
+  drilling_total  Int     @default(0)
+  drilling_done   Int     @default(0)
+
+  border_total    Int     @default(0)
+  border_done     Int     @default(0)
+
+  packaging_total Int     @default(0)
+  packaging_done  Int     @default(0)
+
+  items_started   Int     @default(0)
+  items_finished  Int     @default(0)
+
+  first_read_date DateTime?
+  last_read_date  DateTime?
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  order           Order @relation(fields: [order_id], references: [id])
+
+  @@index([company_id])
 }
