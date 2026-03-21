@@ -61,7 +61,7 @@ export const getOrdersSummary = async (req: Request, res: Response) => {
             FROM "OrderProgress" op
             JOIN "Order" o ON o.id = op.order_id
           WHERE op.company_id = ${companyId}
-          and o.delivery_date >= ${startDate}::date and o.delivery_date <= (${endDate}::date + interval '1 day')
+          and o.order_date >= ${startDate}::date and o.order_date <= (${endDate}::date + interval '1 day')
           ;
         `;
         const parsed: any[] = JSON.parse(
