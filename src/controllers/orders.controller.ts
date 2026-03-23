@@ -137,14 +137,20 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
           companyId: companyId,
         },
       });
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
     try {
       const orderItems = await prisma.orderItem.findMany({
         where: {
           company_id: companyId,
           order: {
             order_date: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
+              gte: start,
+              lte: end,
             },
             ...(orderNumber && { order_number: Number(orderNumber) }),
             ...(batchNumber && { batch_number: Number(batchNumber) }),
@@ -393,6 +399,11 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
     if (!startDate || !endDate || !companyId || !poID) {
         return res.status(400).json({ error: 'Date/po filters are missing' });
     }
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
     try {
       const historytest = await prisma.orderItemHistory.findMany({
         where: {
@@ -401,8 +412,8 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
             companyId: companyId,
           },
           read_date: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
+            gte: start,
+            lte: end,
           },
           orderItem:{
             order: {
