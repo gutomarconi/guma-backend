@@ -177,7 +177,7 @@ export const createOrderItems = async (req: Request, res: Response) => {
         const key = `${companyId}_${item.NroPedido}`;
         if (!ordersMap.has(key)) {
             ordersMap.set(key, {
-            companyId,
+            company_id: companyId,
             order_number: Number(item.NroPedido),
             batch_number: Number(item.NroLote),
             load_number: item.Carga,
@@ -198,7 +198,7 @@ export const createOrderItems = async (req: Request, res: Response) => {
         const key = `${companyId}_${item.Peca}`;
         if (!productsMap.has(key)) {
             productsMap.set(key, {
-            companyId,
+            company_id: companyId,
             item_code: item.Peca,
             description: item.Descricao,
             cubic_meter: item.MetroCubico ?? 0,
