@@ -28,6 +28,7 @@ type IItemsV2 = {
   machineName: string;
   buy_order: string;
   material_cut: string;
+  reading_type: string;
 }
 
 export const getOrdersSummary = async (req: Request, res: Response) => {
@@ -267,6 +268,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
               has_packaging_po: productRoutes.includes(machine.poId),
               buy_order: orderItem.order.buy_order,
               material_cut: orderItem.product.material_cut,
+              reading_type: ''
             });
             
           }
@@ -478,7 +480,8 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
           poId: history.machine.poId,
           status: '',
           box_number: history.orderItem.order.box_mumber,
-          readingDate: history.read_date.toISOString()
+          readingDate: history.read_date.toISOString(),
+          reading_type: history.reading_type
         })
       }
 
@@ -552,7 +555,7 @@ console.log(resultItems.size, '3')
       console.log(resultItems.size, '4')
 
       for (const item of resultItems.values()) {
-        const key = `${item.barcode}_${item.machineId}`;
+        const key = `${item.barcode}_${item.machineId}_${item.reading_type}`;
 
         if (!grouped.has(key)) {
           grouped.set(key, {
