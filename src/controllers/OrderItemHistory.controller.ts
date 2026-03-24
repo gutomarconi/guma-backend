@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { getOrderItemByBarcode } from '../services/itemService';
-import { ICreateItemHistory } from '../types';
+import { ICreateItemHistory, IOrderItemHistoryModel, ReadingType } from '../types';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
 const updateOrderStats = async (ids: number[]) => {
  await prisma.$executeRaw`
@@ -67,7 +70,7 @@ export const createOrderItemHistory = async (req: Request, res: Response) => {
         po_id: machine.poId,
         order_item_id: orderItem.id
       } });
-      await updateOrderStats([history.id])
+      await updateOrderStats([orderItem.id])
 
       res.status(201).json(history);
     } catch (error: unknown) {
@@ -93,7 +96,7 @@ export const createOrderItemHistories = async (req: Request, res: Response) => {
   if (!itemHistories || itemHistories.length === 0) return res.status(400).json({ errors: "Dados inválidos" });
 
   try {
-    const createdHistories = [];
+    const createdHistories: IOrderItemHistoryModel[] = [];
     const invalidHistories = [];
     for (const itemHistory of itemHistories) {
       const { barcode, machineId } = itemHistory;
@@ -105,14 +108,22 @@ export const createOrderItemHistories = async (req: Request, res: Response) => {
           }
         })
         if (orderItem?.id && machine.id) {
-          createdHistories.push({
-            machine_id: Number(machineId),
-            product_id: Number(orderItem?.product_id),
-            company_id: Number(req.user?.companyId),
-            read_date: itemHistory.readDate,
-            po_id: machine.poId,
-            order_item_id: orderItem.id
-          })
+            const existentReading = await prisma.orderItemHistory.findFirst({ where: { order_item_id: orderItem.id, machine_id: Number(machineId) }})
+            let diff = 0;
+            if (existentReading) {
+                diff = dayjs.utc(itemHistory.readDate).diff(dayjs.utc(existentReading.read_date), 'minute');
+            }
+            if ((existentReading && diff > 10) || !existentReading)  {
+                createdHistories.push({
+                    machine_id: Number(machineId),
+                    product_id: Number(orderItem?.product_id),
+                    company_id: Number(req.user?.companyId),
+                    read_date: dayjs(itemHistory.readDate).toISOString(),
+                    po_id: machine.poId,
+                    order_item_id: orderItem.id,
+                    reading_type: diff > 10 ? ReadingType.Retrabalho : ReadingType.Normal
+                })
+            }
         } else {
           invalidHistories.push({
             machineId: Number(machineId),
@@ -129,7 +140,7 @@ export const createOrderItemHistories = async (req: Request, res: Response) => {
     }
     if (createdHistories.length > 0) {
       await prisma.orderItemHistory.createMany({ data: createdHistories, skipDuplicates: true, });
-      const itemIds = [...new Set(createdHistories.map(r => r.itemId))]
+      const itemIds = [...new Set(createdHistories.map(r => r.order_item_id))]
       await updateOrderStats(itemIds)
     }
     res.status(201).json(createdHistories);

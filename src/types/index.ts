@@ -71,3 +71,20 @@ export interface IPOModel {
   id: number;
   description: string;
 }
+
+export enum ReadingType {
+  Retrabalho = 'Retrabalho',
+  Refugo = 'Refugo',
+  Normal = 'Normal',
+  Outro = 'Outro'
+}
+
+export interface IOrderItemHistoryModel {
+  company_id: number;
+  order_item_id: number;
+  product_id: number
+  po_id: number
+  machine_id: number
+  read_date: string
+  reading_type: ReadingType
+}

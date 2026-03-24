@@ -448,8 +448,10 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
 
       const orderIds = new Set<number>();
       const resultItems = new Map<string, IItemsV2>();
+      console.log('historytest', historytest.length)
       for (const history of historytest) {
-        const resultKey = `${history.order_item_id}_${history.machine.id}`;
+        const resultKey = `${history.order_item_id}_${history.machine.id}_${history.reading_type}`;
+        console.log(resultKey)
 
         orderIds.add(history.orderItem.order.order_number);
         resultItems.set(resultKey, {
@@ -480,7 +482,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
         })
       }
 
-     
+     console.log(resultItems.size, '1')
       const orderStats: Record<string, IOrderStats> = {}
       for (const ri of resultItems.values()) {
         const order = ri.order_number
@@ -524,7 +526,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
 
         }
       }
-
+console.log(resultItems.size, '2')
       const orderStatusMap: Record<number, string> = {}
       for (const order of orderIds.values()) {
         const stats = orderStats[order]
@@ -541,12 +543,13 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
             ? "DONE"
             : "PENDING"
       }
-
+console.log(resultItems.size, '3')
       for (const ri of resultItems.values()) {
         ri.order_status = orderStatusMap[ri.order_number]
       }
 
       const grouped = new Map<string, any>();
+      console.log(resultItems.size, '4')
 
       for (const item of resultItems.values()) {
         const key = `${item.barcode}_${item.machineId}`;

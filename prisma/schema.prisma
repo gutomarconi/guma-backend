@@ -204,6 +204,7 @@ model OrderItemHistory {
   machine_id    Int
   created_at    DateTime @default(now())
   read_date     DateTime @default(now())
+  reading_type  ReadingType?
 
   orderItem OrderItem @relation(fields: [order_item_id], references: [id])
   machine Machine @relation(fields: [machine_id], references: [id])
@@ -243,4 +244,11 @@ model OrderProgress {
   order           Order @relation(fields: [order_id], references: [id])
 
   @@index([company_id])
+}
+
+enum ReadingType {
+  Retrabalho
+  Refugo
+  Normal
+  Outro
 }
