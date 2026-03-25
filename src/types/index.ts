@@ -20,6 +20,7 @@ export interface ICreateItemBody {
   MaterialCorte?: string;
   MaterialBorda?: string;
   Cliente?: string;
+  Planejador?: string;
 }
 
 export interface ICreateItemHistory {

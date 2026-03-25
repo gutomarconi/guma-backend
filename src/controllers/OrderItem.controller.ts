@@ -62,6 +62,7 @@ export const createOrderItem = async (req: Request, res: Response) => {
                 square_meter: item.MetroQuadrado,
                 material_cut: item.MaterialCorte,
                 material_border: item.MaterialBorda,
+                planner: item.Planejador
             }
         });
     }
@@ -206,6 +207,7 @@ export const createOrderItems = async (req: Request, res: Response) => {
             square_meter: item.MetroQuadrado ?? 0,
             material_cut: item.MaterialCorte ?? '',
             material_border: item.MaterialBorda ?? '',
+            planner: item.Planejador
             });
         }
     }

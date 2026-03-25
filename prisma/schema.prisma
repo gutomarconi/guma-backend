@@ -155,6 +155,7 @@ model Product {
   material_cut    String @default("")
   material_border String @default("")
   created_at      DateTime @default(now())
+  planner         String?
 
   routes    ProductRoute[]
   OrderItem OrderItem[]
