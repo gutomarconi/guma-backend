@@ -29,6 +29,7 @@ type IItemsV2 = {
   buy_order: string;
   material_cut: string;
   reading_type: string;
+  planner: string;
 }
 
 export const getOrdersSummary = async (req: Request, res: Response) => {
@@ -268,7 +269,8 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
               has_packaging_po: productRoutes.includes(machine.poId),
               buy_order: orderItem.order.buy_order,
               material_cut: orderItem.product.material_cut,
-              reading_type: ''
+              reading_type: '',
+              planner: orderItem.product.planner,
             });
             
           }
@@ -362,7 +364,8 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
             has_drilling_po: item.has_drilling_po,
             has_packaging_po: item.has_packaging_po,
             buy_order: item.buy_order,
-            material_cut: item.material_cut
+            material_cut: item.material_cut,
+            planner: item.planner,
           });
         }
 
@@ -481,7 +484,8 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
           status: '',
           box_number: history.orderItem.order.box_mumber,
           readingDate: history.read_date.toISOString(),
-          reading_type: history.reading_type
+          reading_type: history.reading_type,
+          planner: history.orderItem.product.planner,
         })
       }
 
@@ -576,6 +580,7 @@ console.log(resultItems.size, '3')
             machineId: item.machineId,
             buy_order: item.buy_order,
             material_cut: item.material_cut,
+            planner: item.planner,
           });
         }
 
