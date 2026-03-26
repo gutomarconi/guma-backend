@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
-import { IItemModel, IMachineModel } from '../types';
-import dayjs from 'dayjs';
+import { IMachineModel } from '../types';
 
 type IItemsV2 = {
 	itemId: number; 
@@ -134,11 +133,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
     if (!startDate || !endDate || !companyId) {
         return res.status(400).json({ error: 'Date filters are missing' });
     }
-    const pos = await prisma.pO.findMany({
-        where: {
-          companyId: companyId,
-        },
-      });
+    const pos = await prisma.pO.findMany();
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
 
@@ -263,10 +258,10 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
               order_delivery_date: orderItem.order.delivery_date ? orderItem.order.delivery_date.toISOString() : undefined,
               order_number: orderItem.order.order_number,
               order_status: '',
-              has_cutting_po: productRoutes.includes(machine.poId),
-              has_bordering_po: productRoutes.includes(machine.poId),
-              has_drilling_po: productRoutes.includes(machine.poId),
-              has_packaging_po: productRoutes.includes(machine.poId),
+              has_cutting_po: productRoutes.includes(1),
+              has_bordering_po: productRoutes.includes(2),
+              has_drilling_po: productRoutes.includes(3),
+              has_packaging_po: productRoutes.includes(4),
               buy_order: orderItem.order.buy_order,
               material_cut: orderItem.product.material_cut,
               reading_type: '',
@@ -453,10 +448,8 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
 
       const orderIds = new Set<number>();
       const resultItems = new Map<string, IItemsV2>();
-      console.log('historytest', historytest.length)
       for (const history of historytest) {
         const resultKey = `${history.order_item_id}_${history.machine.id}_${history.reading_type}`;
-        console.log(resultKey)
 
         orderIds.add(history.orderItem.order.order_number);
         resultItems.set(resultKey, {
@@ -489,7 +482,6 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
         })
       }
 
-     console.log(resultItems.size, '1')
       const orderStats: Record<string, IOrderStats> = {}
       for (const ri of resultItems.values()) {
         const order = ri.order_number
@@ -533,7 +525,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
 
         }
       }
-console.log(resultItems.size, '2')
+
       const orderStatusMap: Record<number, string> = {}
       for (const order of orderIds.values()) {
         const stats = orderStats[order]
@@ -550,13 +542,12 @@ console.log(resultItems.size, '2')
             ? "DONE"
             : "PENDING"
       }
-console.log(resultItems.size, '3')
+
       for (const ri of resultItems.values()) {
         ri.order_status = orderStatusMap[ri.order_number]
       }
 
       const grouped = new Map<string, any>();
-      console.log(resultItems.size, '4')
 
       for (const item of resultItems.values()) {
         const key = `${item.barcode}_${item.machineId}_${item.reading_type}`;

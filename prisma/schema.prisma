@@ -41,7 +41,6 @@ model ApiKey {
 
 model PO {
   id          Int       @id @default(autoincrement())
-  companyId   Int       @default(999999)
   description String
   createdAt   DateTime  @default(now())
   Machine     Machine[]

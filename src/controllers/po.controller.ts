@@ -9,10 +9,7 @@ import { Prisma } from '@prisma/client';
  *   name: POs
  */
 export const getPOs = async (req: Request, res: Response) => {
-  const { companyId } = req.query;
-  const where = companyId ? { companyId: Number(companyId) } : {};
-
-  const pos = await prisma.pO.findMany({ where, orderBy: { createdAt: 'asc' } });
+  const pos = await prisma.pO.findMany({ orderBy: { createdAt: 'asc' } });
   res.json(pos);
 };
 
