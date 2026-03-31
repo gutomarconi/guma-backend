@@ -21,6 +21,7 @@ export interface ICreateItemBody {
   MaterialBorda?: string;
   Cliente?: string;
   Planejador?: string;
+  ClienteCNPJ?: string;
 }
 
 export interface ICreateItemHistory {

@@ -34,6 +34,18 @@ export const createOrderItem = async (req: Request, res: Response) => {
       });
     }
 
+    let customer = await prisma.customer.findFirst({ where: { id_number: item.ClienteCNPJ }})
+    if (!customer) {
+        customer = await prisma.customer.create({
+            data: {
+                id_number: item.ClienteCNPJ,
+                customer_name: item.Cliente,
+                company_id: req.user?.companyId ?? 999999,
+            },
+        })
+
+    }
+
     let order = await prisma.order.findFirst({ where: { order_number: Number(item.NroPedido) }})
     if (!order) {
         order = await prisma.order.create({
@@ -47,6 +59,7 @@ export const createOrderItem = async (req: Request, res: Response) => {
                 order_date: parseDateDDMMYYYY(item.DataEmissao ?? ''),
                 customer_name: item.Cliente,
                 box_mumber: Number(item.Box),
+                customer_id: customer.id,
             },
         })
     }
@@ -172,7 +185,34 @@ export const createOrderItems = async (req: Request, res: Response) => {
         });
       }
     }
+    
+    const customersMap = new Map();
+    for (const item of items) {
+        const customerKey = `${companyId}_${item.ClienteCNPJ}`;
+        if (!customersMap.has(customerKey)) {
+            customersMap.set(customerKey, {
+                id_number: item.ClienteCNPJ,
+                customer_name: item.Cliente,
+                company_id: companyId,
+            })
+        }
+    }
+    const customersToCreate = Array.from(customersMap.values());
+    await prisma.customer.createMany({
+        data: customersToCreate,
+        skipDuplicates: true,
+    });
+
+    const customers = await prisma.customer.findMany({
+        where: {
+            company_id: companyId,
+            id_number: { in: customersToCreate.map(i => i.id_number) }
+        }
+    });
+    const customerMap = new Map(customers.map(c => [c.id_number, c.id]));
+
     const ordersMap = new Map();
+    
 
     for (const item of items) {
         const key = `${companyId}_${item.NroPedido}`;
@@ -187,6 +227,7 @@ export const createOrderItems = async (req: Request, res: Response) => {
             order_date: parseDateDDMMYYYY(item.DataEmissao),
             customer_name: item.Cliente,
             box_mumber: Number(item.Box),
+            customer_id: customerMap.get(item.ClienteCNPJ),
             });
         }
     }
