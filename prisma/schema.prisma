@@ -135,12 +135,13 @@ model Order {
   createdAt     DateTime @default(now())
   batch_number  Int
   box_mumber    Int?
-
+  
   items OrderItem[]
   progress       OrderProgress?
-
+  
   @@unique([company_id, order_number])
   @@index([company_id, order_date])
+  
 }
 
 model Product {
@@ -251,4 +252,18 @@ enum ReadingType {
   Refugo
   Normal
   Outro
+}
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  company_id    Int
+  customer_name String
+  id_number     String
+  createdAt     DateTime @default(now())
+
+  
+
+  @@unique([company_id, id_number])
+  @@index([company_id, id])
+  @@index([company_id, id_number])
 }
