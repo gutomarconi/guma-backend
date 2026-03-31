@@ -33,17 +33,19 @@ export const createOrderItem = async (req: Request, res: Response) => {
         message: 'Campos obrigatórios ausentes em um ou mais itens',
       });
     }
+    let customer: { id: number; company_id: number; customer_name: string; id_number: string; createdAt: Date; } | undefined = undefined;
+    if (item.ClienteCNPJ) {
+        customer = await prisma.customer.findFirst({ where: { id_number: item.ClienteCNPJ }})
+        if (!customer) {
+            customer = await prisma.customer.create({
+                data: {
+                    id_number: item.ClienteCNPJ,
+                    customer_name: item.Cliente,
+                    company_id: req.user?.companyId ?? 999999,
+                },
+            })
 
-    let customer = await prisma.customer.findFirst({ where: { id_number: item.ClienteCNPJ }})
-    if (!customer) {
-        customer = await prisma.customer.create({
-            data: {
-                id_number: item.ClienteCNPJ,
-                customer_name: item.Cliente,
-                company_id: req.user?.companyId ?? 999999,
-            },
-        })
-
+        }
     }
 
     let order = await prisma.order.findFirst({ where: { order_number: Number(item.NroPedido) }})
@@ -59,7 +61,7 @@ export const createOrderItem = async (req: Request, res: Response) => {
                 order_date: parseDateDDMMYYYY(item.DataEmissao ?? ''),
                 customer_name: item.Cliente,
                 box_mumber: Number(item.Box),
-                customer_id: customer.id,
+                customer_id: customer ? customer.id : 1,
             },
         })
     }
@@ -178,37 +180,45 @@ export const createOrderItems = async (req: Request, res: Response) => {
     }
 
     // opcional: validação mínima de campos obrigatórios
+    let hasCustomerCNPJ = false;
     for (const item of items) {
       if (!item.NroPedido || !item.Peca || !item.CodigoBarras) {
         return res.status(400).json({
           message: 'Campos obrigatórios ausentes em um ou mais itens',
         });
       }
+      if (item.ClienteCNPJ) {
+        hasCustomerCNPJ = true;
+      }
     }
     
     const customersMap = new Map();
-    for (const item of items) {
-        const customerKey = `${companyId}_${item.ClienteCNPJ}`;
-        if (!customersMap.has(customerKey)) {
-            customersMap.set(customerKey, {
-                id_number: item.ClienteCNPJ,
-                customer_name: item.Cliente,
-                company_id: companyId,
-            })
+    let customers = [];
+    if (hasCustomerCNPJ) {  
+        for (const item of items) {
+            const customerKey = `${companyId}_${item.ClienteCNPJ}`;
+            if (!customersMap.has(customerKey)) {
+                customersMap.set(customerKey, {
+                    id_number: item.ClienteCNPJ,
+                    customer_name: item.Cliente,
+                    company_id: companyId,
+                })
+            }
         }
-    }
-    const customersToCreate = Array.from(customersMap.values());
-    await prisma.customer.createMany({
-        data: customersToCreate,
-        skipDuplicates: true,
-    });
+        const customersToCreate = Array.from(customersMap.values());
+        await prisma.customer.createMany({
+            data: customersToCreate,
+            skipDuplicates: true,
+        });
 
-    const customers = await prisma.customer.findMany({
-        where: {
-            company_id: companyId,
-            id_number: { in: customersToCreate.map(i => i.id_number) }
-        }
-    });
+        customers = await prisma.customer.findMany({
+            where: {
+                company_id: companyId,
+                id_number: { in: customersToCreate.map(i => i.id_number) }
+            }
+        });
+        
+    }
     const customerMap = new Map(customers.map(c => [c.id_number, c.id]));
 
     const ordersMap = new Map();
@@ -227,7 +237,7 @@ export const createOrderItems = async (req: Request, res: Response) => {
             order_date: parseDateDDMMYYYY(item.DataEmissao),
             customer_name: item.Cliente,
             box_mumber: Number(item.Box),
-            customer_id: customerMap.get(item.ClienteCNPJ),
+            customer_id: item.ClienteCNPJ ? customerMap.get(item.ClienteCNPJ) : 1,
             });
         }
     }
