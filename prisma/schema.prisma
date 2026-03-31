@@ -135,13 +135,15 @@ model Order {
   createdAt     DateTime @default(now())
   batch_number  Int
   box_mumber    Int?
-  
+  customer_id   Int @default(1)
+
   items OrderItem[]
   progress       OrderProgress?
-  
+  customer Customer @relation(fields: [customer_id], references: [id])
+
   @@unique([company_id, order_number])
   @@index([company_id, order_date])
-  
+  @@index([company_id, customer_id])
 }
 
 model Product {
@@ -261,8 +263,8 @@ model Customer {
   id_number     String
   createdAt     DateTime @default(now())
 
+  orders         Order[]
   
-
   @@unique([company_id, id_number])
   @@index([company_id, id])
   @@index([company_id, id_number])
