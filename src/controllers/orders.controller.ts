@@ -226,7 +226,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
         for (const machine of machines) {
           const poStatusList = poStatusMap.get(machine.po.id);
           const productRoutes = routesByProduct.get(orderItem.product_id);
-          const required = productRoutes.includes(machine.poId) && poStatusList.length > 0;
+          const required = productRoutes.includes(machine.poId) && poStatusList?.length > 0;
           if (!required) continue;
 
           const key = `${orderItem.id}_${machine.poId}`;
@@ -377,7 +377,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
         for (const item of grouped.values()) {
           for (const po of pos) {
             const poStatusList = poStatusMap.get(po.id);
-            if (poStatusList.length === 1) {
+            if (poStatusList?.length === 1) {
               const [filteredStatus] = poStatusList;
               if (item[po.description]?.status !== filteredStatus) {
                 grouped.delete(item.barcode)
