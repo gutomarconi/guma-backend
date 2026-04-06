@@ -193,8 +193,8 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
       const orderItemIds = orderItems.map(i => i.id);
 
-      if (orderItemIds.length > 7000) {
-        return res.status(400).json({ error: 'muitos dados' });
+      if (orderItemIds.length > 10000) {
+        return res.status(400).json({ error: 'muitos dados ' + orderItemIds.length });
       }
 
 
