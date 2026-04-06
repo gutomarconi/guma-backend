@@ -92,6 +92,10 @@ type GetOrderDetailsBody = {
   machineId?: number
 };
 
+export enum POStatus {
+  Done = 'DONE',
+  Pending = 'PENDING',
+}
 
 const poStatusToMap = (
   poStatus?: Record<string, string[]>
@@ -196,7 +200,12 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
         }
       });
 
-      const poStatusMap = poStatusToMap(poStatus ?? {});
+      const poStatusMap = poStatusToMap(poStatus ?? {
+    '1': [POStatus.Done, POStatus.Pending],
+    '2': [POStatus.Done, POStatus.Pending],
+    '3': [POStatus.Done, POStatus.Pending],
+    '4': [POStatus.Done, POStatus.Pending],
+  });
       const machines = await prisma.machine.findMany({
         where: {
           companyId: companyId,
