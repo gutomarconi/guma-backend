@@ -460,7 +460,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
       const orderIds = new Set<number>();
       const resultItems = new Map<string, IItemsV2>();
       for (const history of historytest) {
-        const resultKey = `${history.order_item_id}_${history.machine.id}_${history.reading_type}`;
+        const resultKey = `${history.order_item_id}_${history.machine.id}_${history.reading_type}_${history.read_date.toISOString()}`;
 
         orderIds.add(history.orderItem.order.order_number);
         resultItems.set(resultKey, {
@@ -561,7 +561,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
       const grouped = new Map<string, any>();
 
       for (const item of resultItems.values()) {
-        const key = `${item.barcode}_${item.machineId}_${item.reading_type}`;
+        const key = `${item.barcode}_${item.machineId}_${item.reading_type}_${item.readingDate}`;
 
         if (!grouped.has(key)) {
           grouped.set(key, {
