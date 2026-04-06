@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { IMachineModel } from '../types';
+import dayjs from 'dayjs';
 
 type IItemsV2 = {
 	itemId: number; 
@@ -132,31 +133,6 @@ export interface IHistoryMap {
     read_date: Date;
 }
 
-async function getOrderItemHistory(orderItemIds: number[]) {
-  if (!orderItemIds || orderItemIds.length === 0) return [];
-
-  const batchSize = 3000;
-
-  const results: IHistoryMap[] = [];
-
-  for (let i = 0; i < orderItemIds.length; i += batchSize) {
-    const batch = orderItemIds.slice(i, i + batchSize);
-
-    const batchResult = await prisma.$queryRaw<IHistoryMap[]>`
-      SELECT 
-        order_item_id,
-        machine_id,
-        read_date 
-      FROM "OrderItemHistory" 
-      WHERE order_item_id = ANY(${batch}::bigint[])
-    `;
-
-    results.push(...batchResult);
-  }
-
-  return results;
-}
-
 export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
   const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus, loadNumber, poID } = req.body;
     if (!startDate || !endDate || !companyId) {
@@ -168,6 +144,9 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
+    if (dayjs(start).diff(dayjs(end), 'day') > 31) {
+      return res.status(400).json({ error: 'Date range exceeds 31 days' });
+    }
 
     try {
       const orderItems = await prisma.orderItem.findMany({
@@ -214,7 +193,16 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
       const orderItemIds = orderItems.map(i => i.id);
 
-      const history = await getOrderItemHistory(orderItemIds);
+      const history = await prisma.orderItemHistory.findMany({
+        where: {
+          order_item_id: { in: orderItemIds }
+        },
+        select: {
+          order_item_id: true,
+          machine_id: true,
+          read_date: true
+        }
+      });
 
       const poStatusMap = poStatusToMap(poStatus ?? {
     '1': [POStatus.Done, POStatus.Pending],
