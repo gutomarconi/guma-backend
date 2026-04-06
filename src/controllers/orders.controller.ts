@@ -132,6 +132,32 @@ export interface IHistoryMap {
     read_date: Date;
 }
 
+async function getOrderItemHistory(orderItemIds: number[]) {
+  if (orderItemIds.length === 0) return [];
+
+  const batchSize = 2500;           // ajuste entre 1500 e 3000
+  const results: any[] = [];
+
+  for (let i = 0; i < orderItemIds.length; i += batchSize) {
+    const batch = orderItemIds.slice(i, i + batchSize);
+
+    const batchResult = await prisma.orderItemHistory.findMany({
+      where: {
+        order_item_id: { in: batch }   // agora o array é pequeno
+      },
+      select: {
+        order_item_id: true,
+        machine_id: true,
+        read_date: true
+      }
+    });
+
+    results.push(...batchResult);
+  }
+
+  return results;
+}
+
 export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody>, res: Response) => {
   const { startDate, endDate, status, companyId, orderNumber, batchNumber, searchItem, poStatus, loadNumber, poID } = req.body;
     if (!startDate || !endDate || !companyId) {
@@ -189,16 +215,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
       const orderItemIds = orderItems.map(i => i.id);
 
-      const history = await prisma.orderItemHistory.findMany({
-        where: {
-          order_item_id: { in: orderItemIds }
-        },
-        select: {
-          order_item_id: true,
-          machine_id: true,
-          read_date: true
-        }
-      });
+      const history = await getOrderItemHistory(orderItemIds);
 
       const poStatusMap = poStatusToMap(poStatus ?? {
     '1': [POStatus.Done, POStatus.Pending],
