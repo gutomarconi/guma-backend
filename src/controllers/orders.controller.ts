@@ -133,24 +133,23 @@ export interface IHistoryMap {
 }
 
 async function getOrderItemHistory(orderItemIds: number[]) {
-  if (orderItemIds.length === 0) return [];
+  if (!orderItemIds || orderItemIds.length === 0) return [];
 
-  const batchSize = 2500;           // ajuste entre 1500 e 3000
-  const results: any[] = [];
+  const batchSize = 3000;
+
+  const results: IHistoryMap[] = [];
 
   for (let i = 0; i < orderItemIds.length; i += batchSize) {
     const batch = orderItemIds.slice(i, i + batchSize);
 
-    const batchResult = await prisma.orderItemHistory.findMany({
-      where: {
-        order_item_id: { in: batch }   // agora o array é pequeno
-      },
-      select: {
-        order_item_id: true,
-        machine_id: true,
-        read_date: true
-      }
-    });
+    const batchResult = await prisma.$queryRaw<IHistoryMap[]>`
+      SELECT 
+        order_item_id,
+        machine_id,
+        read_date 
+      FROM "OrderItemHistory" 
+      WHERE order_item_id = ANY(${batch}::bigint[])
+    `;
 
     results.push(...batchResult);
   }
