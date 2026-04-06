@@ -6,9 +6,9 @@ export const prisma = new PrismaClient({ log: [
     { emit: 'stdout', level: 'warn' },
   ], });
 prisma.$on('query', (e) => {
-  // console.log('Query:', e.query);
-  // console.log('Params:', e.params);
-  // console.log('Duration:', e.duration, 'ms');
+  console.log('Query:', e.query);
+  console.log('Params:', e.params);
+  console.log('Duration:', e.duration, 'ms');
 });
 export default prisma;
     
