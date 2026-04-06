@@ -229,7 +229,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
       const resultItems = new Map<string, IItemsV2>();
       const orderIds = new Set<number>();
-
+      console.log( 'order items length', orderItems.length)
       for (const orderItem of orderItems) {
 
         for (const machine of machines) {
@@ -281,6 +281,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
         }
       }
+      console.log( 'result items length', resultItems.size)
       const orderStats: Record<string, IOrderStats> = {}
       for (const ri of resultItems.values()) {
         const order = ri.order_number
@@ -347,7 +348,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
       }
 
       const grouped = new Map<string, any>();
-
+console.log( 'result items length 2', resultItems.size)
       for (const item of resultItems.values()) {
         const key = `${item.barcode}_${item.readingDate}`;
 
@@ -395,6 +396,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
           }
         }
       }
+      console.log( 'grouped items length', grouped.size)
       res.status(200).json(Array.from(grouped.values()));
     } catch(err:any) {
         console.log(err)
