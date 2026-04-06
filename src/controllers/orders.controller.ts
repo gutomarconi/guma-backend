@@ -243,7 +243,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
           const done = !!historyRecord;
           const readingDate = historyRecord?.read_date;
-          const resultKey = `${orderItem.id}_${machine.poId}`;
+          const resultKey = `${orderItem.id}_${machine.poId}_${readingDate?.toISOString()}`;
           const existing = resultItems.get(resultKey);
           orderIds.add(orderItem.order.order_number);
           if (existing) {
@@ -349,7 +349,7 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
       const grouped = new Map<string, any>();
 
       for (const item of resultItems.values()) {
-        const key = item.barcode;
+        const key = `${item.barcode}_${item.readingDate}`;
 
         if (!grouped.has(key)) {
           grouped.set(key, {

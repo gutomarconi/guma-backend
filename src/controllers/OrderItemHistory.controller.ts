@@ -108,7 +108,7 @@ export const createOrderItemHistories = async (req: Request, res: Response) => {
           }
         })
         if (orderItem?.id && machine.id) {
-            const existentReading = await prisma.orderItemHistory.findFirst({ where: { order_item_id: orderItem.id, machine_id: Number(machineId) }})
+            const existentReading = await prisma.orderItemHistory.findFirst({ where: { order_item_id: orderItem.id, machine_id: Number(machineId) }, orderBy: { read_date: 'desc' } });
             let diff = 0;
             if (existentReading) {
                 diff = dayjs.utc(itemHistory.readDate).diff(dayjs.utc(existentReading.read_date), 'minute');
