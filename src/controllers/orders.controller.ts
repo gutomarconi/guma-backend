@@ -193,6 +193,11 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
       const orderItemIds = orderItems.map(i => i.id);
 
+      if (orderItemIds.length > 7000) {
+        return res.status(400).json({ error: 'muitos dados' });
+      }
+
+
       const history = await prisma.orderItemHistory.findMany({
         where: {
           order_item_id: { in: orderItemIds }
