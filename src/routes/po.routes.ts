@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getPOs, createPO, updatePO, deletePO, getPOStats } from '../controllers/po.controller';
+import { getPOs, createPO, updatePO, deletePO, getPOStats, getPackagingPendingBarcodes } from '../controllers/po.controller';
 
 const router = Router();
 
@@ -15,6 +15,7 @@ router.post('/', createPO);
 router.patch('/:id', updatePO);
 router.delete('/:id', deletePO);
 router.post('/:id/stats', getPOStats);
+router.get('/packaging/queue', getPackagingPendingBarcodes);
 
 
 export default router;

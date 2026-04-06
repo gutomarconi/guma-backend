@@ -133,3 +133,25 @@ GROUP BY m.id
     }
 };
 
+export async function getPackagingPendingBarcodes(req: Request, res: Response) {
+  try {
+    const barcodes = await prisma.orderItem.findMany({
+      where: {
+        OrderItemHistory: {
+          none: {
+            po_id: 4, // embalagem
+          }
+        }
+      },
+      select: {
+        barcode: true,
+      },
+    });
+
+    return res.json(barcodes);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao buscar fila de embalagem" });
+  }
+}
+
