@@ -179,7 +179,7 @@ model OrderItem {
 
   OrderItemHistory OrderItemHistory[]
 
-  @@unique([barcode], map: "idx_orderitem_barcode_unique")
+  @@unique([barcode, company_id], map: "idx_orderitem_barcode_companyid_unique")
   @@index([company_id, order_id])
   @@index([barcode])
 }
