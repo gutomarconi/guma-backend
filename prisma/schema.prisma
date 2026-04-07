@@ -173,7 +173,7 @@ model OrderItem {
   order      Order   @relation(fields: [order_id], references: [id])
   product    Product @relation(fields: [product_id], references: [id])
 
-  barcode    String   @unique
+  barcode    String  
   quantity   Float
   created_at DateTime @default(now())
 
