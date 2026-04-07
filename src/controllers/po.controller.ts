@@ -61,41 +61,41 @@ export const getPOStats = async (req: Request, res: Response) => {
 
     try {
       const result = await prisma.$queryRaw<
-  {
-    id: number;
-    dailyCapacity: number;
-    unityCost: number;
-    capacityUnity: string;
-    totalDone: number;
-    itemMetric: number;
-    itemSquareMeter: number;
-  }[]
->`
-SELECT 
-  m.id,
-  m.capacity AS "dailyCapacity",
-  m.unity_cost AS "unityCost",
-  m.capacity_unity AS "capacityUnity",
-  COUNT(h.id) AS "totalDone",
-  SUM(p.square_meter) AS "itemSquareMeter",
-  SUM(
-    CASE
-      WHEN m.capacity_unity = 'M2' THEN p.square_meter
-      WHEN m.capacity_unity = 'M3' THEN p.cubic_meter
-      WHEN m.capacity_unity = 'M'  THEN p.linear_meter
-      ELSE 1
-    END
-  ) AS "itemMetric"
-FROM "OrderItemHistory" h
-JOIN "Machine" m ON m.id = h.machine_id
-JOIN "Product" p ON p.id = h.product_id
-WHERE h.read_date >= ${startDate}::date
-AND h.read_date < (${endDate}::date + interval '1 day')
-AND m."poId" = ${Number(id)}
-AND m."companyId" = ${Number(companyId)}
-${machineId ? Prisma.sql` AND m.id = ${machineId}` : Prisma.empty}
-GROUP BY m.id
-`;
+        {
+          id: number;
+          dailyCapacity: number;
+          unityCost: number;
+          capacityUnity: string;
+          totalDone: number;
+          itemMetric: number;
+          itemSquareMeter: number;
+        }[]
+      >`
+        SELECT 
+          m.id,
+          m.capacity AS "dailyCapacity",
+          m.unity_cost AS "unityCost",
+          m.capacity_unity AS "capacityUnity",
+          COUNT(h.id) AS "totalDone",
+          SUM(p.square_meter) AS "itemSquareMeter",
+          SUM(
+            CASE
+              WHEN m.capacity_unity = 'M2' THEN p.square_meter
+              WHEN m.capacity_unity = 'M3' THEN p.cubic_meter
+              WHEN m.capacity_unity = 'M'  THEN p.linear_meter
+              ELSE 1
+            END
+          ) AS "itemMetric"
+        FROM "OrderItemHistory" h
+        JOIN "Machine" m ON m.id = h.machine_id
+        JOIN "Product" p ON p.id = h.product_id
+        WHERE h.read_date >= ${startDate}::date
+        AND h.read_date < (${endDate}::date + interval '1 day')
+        AND m."poId" = ${Number(id)}
+        AND m."companyId" = ${Number(companyId)}
+        ${machineId ? Prisma.sql` AND m.id = ${machineId}` : Prisma.empty}
+        GROUP BY m.id
+      `;
 
       const totals = result.reduce(
         (acc, m) => {
@@ -135,20 +135,15 @@ GROUP BY m.id
 
 export async function getPackagingPendingBarcodes(req: Request, res: Response) {
   try {
-    const barcodes = await prisma.orderItem.findMany({
-      where: {
-        OrderItemHistory: {
-          none: {
-            po_id: 4, // embalagem
-          }
-        }
-      },
-      select: {
-        barcode: true,
-      },
-    });
+    const result = await prisma.$queryRaw<
+        {
+          barcode: string;
+        }[]
+      >`
+        select barcode from "OrderItem" oi where Not exists (select 1 from "OrderItemHistory" oih where oih.order_item_id = oi.id and oih.po_id = 4)
+      `;
 
-    return res.json(barcodes);
+    return res.json(result);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao buscar fila de embalagem" });
