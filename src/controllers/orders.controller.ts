@@ -431,6 +431,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
             lte: end,
           },
           orderItem:{
+            company_id: companyId,
             order: {
               ...(orderNumber && { order_number: Number(orderNumber) }),
               ...(batchNumber && { batch_number: Number(batchNumber) }),
