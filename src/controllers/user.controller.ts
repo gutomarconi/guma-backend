@@ -206,3 +206,27 @@ export async function validateResetToken(req, res) {
 
   return res.json({ valid: true });
 }
+
+export const updateUserPassword = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+    return res.status(400).json({ error: 'Nova senha deve ter pelo menos 6 caracteres' });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  try {
+    const user = await prisma.user.update({
+      where: { id: Number(id) },
+      data: { senha: hashed },
+    });
+    res.json(user);
+  } catch (error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Usuário não encontrado' });
+      res.status(500).json({ error: 'Erro ao atualizar senha' });
+    }
+  }
+};

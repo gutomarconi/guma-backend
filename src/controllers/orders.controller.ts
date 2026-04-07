@@ -193,11 +193,6 @@ export const getOrderDetailsV2 = async (req: Request<{}, {}, GetOrderDetailsBody
 
       const orderItemIds = orderItems.map(i => i.id);
 
-      if (orderItemIds.length > 15000) {
-        return res.status(400).json({ error: 'muitos dados ' + orderItemIds.length });
-      }
-
-
       const history = await prisma.orderItemHistory.findMany({
         where: {
           order_item_id: { in: orderItemIds }
@@ -592,6 +587,7 @@ export const getOrderReadingsByPO = async (req: Request<{}, {}, GetOrderDetailsB
             buy_order: item.buy_order,
             material_cut: item.material_cut,
             planner: item.planner,
+            reading_type: item.reading_type,
           });
         }
 
