@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { createPOSchema, updatePOSchema } from '../schemas/po.schema';
 import { Prisma } from '@prisma/client';
+import { getProductionMonitoring } from '../services/poService';
 
 /**
  * @swagger
@@ -150,3 +151,33 @@ export async function getPackagingPendingBarcodes(req: Request, res: Response) {
   }
 }
 
+export async function getProductionMonitoringCutting(req:Request, res: Response) {
+  const { startDate, endDate, machineIds } = req.body;
+
+  const parsedMachineIds = String(machineIds)
+    .split(",")
+    .map(Number);
+
+  const data = await getProductionMonitoring({
+    startDate,
+    endDate,
+    machineIds: parsedMachineIds,
+    companyId: req.user.companyId
+  });
+
+  res.json(data);
+}
+
+export async function getControlledPos(req: Request, res: Response) {
+  const where: any = {};
+
+  const machines = await prisma.machine.findMany({ where: { companyId: req.user.companyId }, include: {
+    po: {
+      select: {
+        description: true,
+      },
+    },
+  }, });
+  const uniquePOS = Array.from(new Set(machines.map(machine => machine.po.description)));
+  res.json(uniquePOS)
+}
